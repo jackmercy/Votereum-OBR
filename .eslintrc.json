@@ -1,19 +1,21 @@
 {
     "env": {
-        "browser": true
+        "browser": true,
+        "node" : true,
+        "es6" : true
     },
     "extends": "eslint:recommended",
     "parserOptions": {
-        "ecmaVersion": 5
+        "sourceType": "module"
     },
     "rules": {
         "indent": [
-            "error",
-            "tab"
+            "warn",
+            "space"
         ],
         "linebreak-style": [
             "error",
-            "unix"
+            "windows"
         ],
         "quotes": [
             "error",
@@ -31,6 +33,7 @@
         "newline-before-return": 1,
         "no-angle-bracket-type-assertion": false,
         "no-attribute-parameter-decorator": true,
+        "no-console":"warn",
         "no-consecutive-blank-lines": [true, 1],
         "no-forward-ref": true,
         "no-implicit-dependencies": false,
