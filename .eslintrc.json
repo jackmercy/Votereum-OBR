@@ -32,7 +32,6 @@
         "no-angle-bracket-type-assertion": false,
         "no-attribute-parameter-decorator": true,
         "no-consecutive-blank-lines": [true, 1],
-        "no-console": [false],
         "no-forward-ref": true,
         "no-implicit-dependencies": false,
         "no-input-rename": true,

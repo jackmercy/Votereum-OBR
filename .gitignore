@@ -1,3 +1,22 @@
+# compiled output
+/dist
+/dist-server
+/tmp
+/out-tsc
+/build
+/.compiled
+
+# dependencies
+/node_modules
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
 # Logs
 logs
 *.log

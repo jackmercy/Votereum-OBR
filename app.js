@@ -4,11 +4,12 @@ import bodyParser from 'body-parser';
 import mongoose from 'mongoose';
 import compress from 'compression';
 import appRoot from 'app-root-path';
-// import favicon from 'serve-favicon';
 import morgan from 'morgan';
 // import logger from 'logger';
 import Web3 from 'web3';
 import router from './routes/index.route';
+import Config from './config-key';
+import votingJson from './truffle/build/contracts/Voting';
 /* Import libary */
 
 /* Init variable */
@@ -82,14 +83,14 @@ app.listen(port, function() {
 
 
 //Connecting to blockchain
-/* var abiDefinition;
+ var abiDefinition;
 var votingContract;
 
-abiDefinition = votingJson.abi; */
+abiDefinition = votingJson.abi;
 
 //Testnet
-/* global.web3 = new Web3('http://localhost:8545');
-global.votingContract = new web3.eth.Contract(abiDefinition,'0xbdca24b079e714146fe40764c2d9b9f7995afc2a'); */
+global.web3 = new Web3('http://localhost:8545');
+global.votingContract = new web3.eth.Contract(abiDefinition, Config.contractAddress);
 
 
 
@@ -98,11 +99,11 @@ global.votingContract = new web3.eth.Contract(abiDefinition,'0xbdca24b079e714146
 global.votingContract = new web3.eth.Contract(abiDefinition,'0x345ca3e014aaf5dca488057592ee47305d9b3e10');*/
 
 
-/* if (web3) {
+ if (web3) {
     console.log('successfully connected to blockchain');
 }
 else {
     console.log('error on connecting blockchain');
-} */
+}
 
 export default app;
