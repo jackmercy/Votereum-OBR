@@ -10,8 +10,8 @@
     },
     "rules": {
         "indent": [
-            "warn",
-            "space"
+            1,
+            4
         ],
         "linebreak-style": [
             "error",
@@ -44,6 +44,7 @@
         "no-submodule-imports": false,
         "no-unnecessary-initializer": true,
         "no-var-requires": false,
+        "no-unused-vars": 1,
         "object-literal-key-quotes": [true, "as-needed"],
         "object-literal-sort-keys": false,
         "one-variable-per-declaration": [true, "ignore-for-loop"],

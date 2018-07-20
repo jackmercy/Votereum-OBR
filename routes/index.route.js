@@ -1,4 +1,5 @@
 import express from 'express';
+import contractRoutes from '../routes/contract.route';
 
 const router = express.Router(); // eslint-disable-line new-cap
 
@@ -6,8 +7,11 @@ const router = express.Router(); // eslint-disable-line new-cap
 
 /** GET [/health-check]
 *  - Check service health */
-router.get('/check', (req, res) =>
+
+router.get('/health-check', (req, res) =>
   res.send('Hello hooman!')
 );
+
+router.use('/contract', contractRoutes);
 
 export default router;

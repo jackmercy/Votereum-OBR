@@ -14,7 +14,7 @@ import votingJson from './truffle/build/contracts/Voting';
 
 /* Init variable */
 var app = express();
-var port = process.env.port || 6000;
+var port = process.env.port || 3000;
 /* Init variable */
 
 /* MongoDb */
@@ -90,9 +90,7 @@ abiDefinition = votingJson.abi;
 
 //Testnet
 global.web3 = new Web3('http://localhost:8545');
-global.votingContract = new web3.eth.Contract(abiDefinition, Config.contractAddress);
-
-
+global.votingContract = new web3.eth.Contract(abiDefinition, Config.CONTRACT_ADDRESS);
 
 //Ganache
 /*global.web3 = new Web3('http://localhost:9545');
