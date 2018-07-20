@@ -1,0 +1,69 @@
+{
+    "env": {
+        "browser": true
+    },
+    "extends": "eslint:recommended",
+    "parserOptions": {
+        "ecmaVersion": 5
+    },
+    "rules": {
+        "indent": [
+            "error",
+            "tab"
+        ],
+        "linebreak-style": [
+            "error",
+            "unix"
+        ],
+        "quotes": [
+            "error",
+            "single"
+        ],
+        "semi": [
+            "error",
+            "always"
+        ],
+        "array-type": [true, "generic"],
+        "arrow-return-shorthand": true,
+        "component-class-suffix": true,
+        "directive-class-suffix": true,
+        "member-access": [true, "no-public"],
+        "newline-before-return": 1,
+        "no-angle-bracket-type-assertion": false,
+        "no-attribute-parameter-decorator": true,
+        "no-consecutive-blank-lines": [true, 1],
+        "no-console": [false],
+        "no-forward-ref": true,
+        "no-implicit-dependencies": false,
+        "no-input-rename": true,
+        "no-irregular-whitespace": 1,
+        "no-output-on-prefix": true,
+        "no-output-rename": true,
+        "no-submodule-imports": false,
+        "no-unnecessary-initializer": true,
+        "no-var-requires": false,
+        "object-literal-key-quotes": [true, "as-needed"],
+        "object-literal-sort-keys": false,
+        "one-variable-per-declaration": [true, "ignore-for-loop"],
+        "pipe-naming": [true, "camelCase", "sg"],
+        "use-host-property-decorator": true,
+        "use-input-property-decorator": true,
+        "use-life-cycle-interface": true,
+        "use-output-property-decorator": true,
+        "use-pipe-transform-interface": true,
+        "trailing-comma": [true, {
+        "multiline": "never",
+        "singleline": "never"
+        }],
+        "variable-name": [true, "ban-keywords", "check-format", "allow-leading-underscore"],
+        "whitespace": [true,
+            "check-branch",
+            "check-decl",
+            "check-operator",
+            "check-module",
+            "check-separator",
+            "check-type",
+            "check-preblock"
+        ]
+    }
+}
