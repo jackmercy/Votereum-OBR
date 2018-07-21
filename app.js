@@ -19,7 +19,7 @@ var port = process.env.port || 3000;
 
 /* MongoDb */
 /* var db;
-db = mongoose.connect('mongodb://localhost/ether-vote-as')
+db = mongoose.connect('mongodb://localhost/ether-vote-obr')
     .then(() =>  console.log('connection succesful to mongodb'))
     .catch((err) => console.error(err)); */
 /* MongoDb */
@@ -60,20 +60,20 @@ app.use('/api', router);
 /* dev */
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
-  var err = new Error('Not Found');
-  err.status = 404;
-  next(err);
+    var err = new Error('Not Found');
+    err.status = 404;
+    next(err);
 });
 
 // error handler
 app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
+    // set locals, only providing error in development
+    res.locals.message = err.message;
+    res.locals.error = req.app.get('env') === 'development' ? err : {};
 
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+    // render the error page
+    res.status(err.status || 500);
+    res.render('error');
 });
 
 // start server on port
@@ -83,7 +83,7 @@ app.listen(port, function() {
 
 
 //Connecting to blockchain
- var abiDefinition;
+var abiDefinition;
 var votingContract;
 
 abiDefinition = votingJson.abi;
@@ -97,7 +97,7 @@ global.votingContract = new web3.eth.Contract(abiDefinition, Config.CONTRACT_ADD
 global.votingContract = new web3.eth.Contract(abiDefinition,'0x345ca3e014aaf5dca488057592ee47305d9b3e10');*/
 
 
- if (web3) {
+if (web3) {
     console.log('successfully connected to blockchain');
 }
 else {

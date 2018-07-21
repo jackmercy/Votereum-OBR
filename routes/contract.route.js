@@ -1,11 +1,11 @@
 import express from 'express';
-import contractController from '../controller/contract.controller';
+import ContractController from '../controllers/contract.controller';
 
 const router = express.Router();
 
 /* Base route: [/api/contract] */
 
-router.get('/update')
-    .get(contractController.updateContractInfo);
+router.route('/update')
+    .get(ContractController.updateContractInfo);
 
 export default router;
