@@ -5,7 +5,10 @@ const router = express.Router();
 
 /* Base route: [/api/contract] */
 
-router.route('/update')
-    .get(ContractController.updateContractInfo);
+router.route('/')
+    .post(ContractController.setContractInfo);
+
+router.route('/candidate')
+    .post(ContractController.setCandidate);
 
 export default router;

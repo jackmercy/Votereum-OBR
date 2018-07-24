@@ -9,7 +9,7 @@ import morgan from 'morgan';
 import Web3 from 'web3';
 import router from './routes/index.route';
 import Config from './config-key';
-import votingJson from './truffle/build/contracts/Voting';
+import votingJson from './truffle/build/contracts/BallotContract';
 /* Import libary */
 
 /* Init variable */
@@ -84,13 +84,21 @@ app.listen(port, function() {
 
 //Connecting to blockchain
 var abiDefinition;
-var votingContract;
+var ballotContract;
+var contractOption = {
+    from: Config.OWNER,
+    gasPrice: '10000000000000', //1Gwei
+    gas: 1000000
+}
 
 abiDefinition = votingJson.abi;
 
 //Testnet
 global.web3 = new Web3('http://localhost:8545');
-global.votingContract = new web3.eth.Contract(abiDefinition, Config.CONTRACT_ADDRESS);
+global.ballotContract = new web3.eth.Contract(
+    abiDefinition,
+    Config.CONTRACT_ADDRESS,
+    contractOption);
 
 //Ganache
 /*global.web3 = new Web3('http://localhost:9545');
@@ -98,7 +106,8 @@ global.votingContract = new web3.eth.Contract(abiDefinition,'0x345ca3e014aaf5dca
 
 
 if (web3) {
-    console.log('successfully connected to blockchain');
+    //console.log(global.ballotContract.option);
+    console.log('successfully connected to blockchain. Address: ' + Config.CONTRACT_ADDRESS);
 }
 else {
     console.log('error on connecting blockchain');
