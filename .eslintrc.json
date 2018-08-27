@@ -33,7 +33,7 @@
         "newline-before-return": 1,
         "no-angle-bracket-type-assertion": false,
         "no-attribute-parameter-decorator": true,
-        "no-console":"warn",
+        "no-console":"off",
         "no-consecutive-blank-lines": [true, 1],
         "no-forward-ref": true,
         "no-implicit-dependencies": false,
