@@ -9,14 +9,15 @@ contract BallotContract {
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Contract Constructor ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
     address owner;                  // The address of the owner. Set in 'Ballot()'
-    bool    optionsFinalized;       // Whether the owner can still add voting options.
+
+
 
     /*
     * Modifier to only allow the owner to call a function.
     */
     modifier onlyOwner
     {
-        require( msg.sender != owner );
+        require( msg.sender             == owner );
         _;
 
     }
@@ -27,18 +28,17 @@ contract BallotContract {
     constructor ()
     {
         owner                   = msg.sender;       // Set the owner to the address creating the contract.
-        optionsFinalized        = false;            // Initially false as we need to add some choices.
     }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Validator ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
     function validTime() private view returns (bool) {
-        if ( now > ballotEndTime || now < ballotStartTime)
+        if ( now > endVotingPhase || now < startVotingPhase)
             return false;
     }
 
     function canVote(Voter _voter) private view returns (bool) {
-        if (optionsFinalized == false)       // If the options are not finalized, we cannot vote.
+        if (isFinalized == false)       // If the options are not finalized, we cannot vote.
             return false;
 
         if (_voter.eligibleToVote == false)
@@ -46,47 +46,54 @@ contract BallotContract {
 
         if (_voter.isVoted == true) // If the voter has already voted, voter cannot vote anymore
             return false;
+        return true;
     }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Ballot Options (Candidate) ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
-    bytes32  ballotName;             // The ballot candidateID.
+
+    bytes32  ballotName; // The ballot candidateID.
+
+    // Time: seconds since 1970-01-01
+    uint    startRegPhase;
+    uint    endRegPhase;
+    uint    startVotingPhase;
+    uint    endVotingPhase;
+
+    // Ballot status
+    bool    isFinalized;       // Whether the owner can still add voting options.
     uint    registeredVoterCount;   // Total number of voter addresses registered.
-    uint    ballotEndTime;          // End time for ballot after which no changes can be made. (seconds since 1970-01-01)
-    uint    ballotStartTime;        // Start time for ballot before which voters can not vote. (seconds since 1970-01-01)
     uint    votedVoterCount;
 
-    mapping (bytes32 => uint) voteReceived; //Map candidateId to the number of vote they received
-    bytes32[] candidateIDs; // dynamically sized array IDs
+    //
+    bytes32[] candidateIDs;
+    mapping (bytes32 => address[]) voteReceived; //map candidateId to array of address that voted for them
 
-    function setupBallot (bytes32 _ballotName, uint _ballotEndTime, uint _ballotStartTime) public {
+    function setupBallot (bytes32 _ballotName, uint _startVotingPhase, uint _endVotingPhase,
+                          uint _startRegPhase, uint _endRegPhase, bytes32[] _candidateIDs) onlyOwner public {
+
+        require (now < _endRegPhase, 'Ballot setup time has ended!');
+        require (isFinalized == false);
+
         ballotName = _ballotName;
-        ballotEndTime = _ballotEndTime;
-        ballotStartTime = _ballotStartTime;
+        startRegPhase = _startRegPhase;
+        endRegPhase = _endRegPhase;
+        startVotingPhase = _startVotingPhase;
+        endVotingPhase = _endVotingPhase;
+
+        isFinalized = false;
         registeredVoterCount = 0;
         votedVoterCount = 0;
+
+        addCandidates(_candidateIDs);
     }
 
-    /*
-    *  Add a new candidate for this ballot.
-    *  NOTE: this can only be called by the ballot owner.
-    */
-    function addCandidate(bytes32 _candidateID) onlyOwner private
-    {
-        require ( now > ballotEndTime);
-        require (optionsFinalized == true);    // Check we are allowed to add options.
 
-        candidateIDs.push(_candidateID);
-        voteReceived[_candidateID] = 0;
-    }
+    function addCandidates(bytes32[] _candidateIDs) onlyOwner public {
+        require (now < endRegPhase, 'Ballot setup time has ended!');
+        require (isFinalized == false);    // Check we are allowed to add options.
 
-    function addCandidate(bytes32[] _candidateIDs) onlyOwner {
-        require ( now > ballotEndTime);
-        require (optionsFinalized == true);    // Check we are allowed to add options.
-
-        for (uint i = 0; i < _candidateIDs.length; i++) {
-            addCandidate(_candidateIDs[i]);
-        }
+        candidateIDs = _candidateIDs;
     }
 
     /*
@@ -96,10 +103,9 @@ contract BallotContract {
     */
     function finalizeBallot() onlyOwner public
     {
-        require(now > ballotEndTime);
-        require(candidateIDs.length < 2);
+        require(candidateIDs.length > 2);
 
-        optionsFinalized = true;    // Stop the addition of any more change.
+        isFinalized = true;    // Stop the addition of any more change.
     }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Voting Options ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
@@ -119,14 +125,12 @@ contract BallotContract {
     *  Allow an address (voter) to vote on this ballot.
     *  NOTE: this can only be called by the ballot owner.
     */
-    function giveRightToVote(address _voter) onlyOwner
+    function giveRightToVote(address _voter) onlyOwner public
     {
-        require(now > ballotEndTime);
+        require (now < endRegPhase, 'Ballot setup time has ended!');
         voters[_voter].eligibleToVote = true;
         registeredVoterCount += 1;      // Increment registered voters.
     }
-
-
 
     /*
     *  Allow an eligible voter to vote for their chosen votingOption.
@@ -138,12 +142,10 @@ contract BallotContract {
     {
         Voter storage voter = voters[msg.sender];    // Get the Voter struct for this sender.
 
-        require(canVote(voter));
-
         voter.isVoted = true;
         votedVoterCount += 1;
-        voter.votedFor.push(_candidateID);
-        voteReceived[_candidateID] += 1;
+        voter.votedFor.push(_candidateID); //Add candidateID to list whom voter voted
+        voteReceived[_candidateID].push(msg.sender);
     }
 
     /*
@@ -157,7 +159,7 @@ contract BallotContract {
     function voteForCandidates(bytes32[] _candidateIDs) public {
         Voter memory voter = voters[msg.sender];    // Get the Voter struct for this sender.
 
-        require(canVote(voter));
+
 
         for (uint i = 0; i < _candidateIDs.length; i++) {
             voteForCandidate(_candidateIDs[i]);
@@ -179,33 +181,31 @@ contract BallotContract {
     /*
     * Returns the ballots bytes32.
     */
-    function getBallotName() returns (bytes32)
-    {
-        return ballotName;
+    function getBallotInfo() public returns (
+        bytes32, uint, uint, uint, uint, bool, uint, uint
+    ) {
+        return (
+        ballotName,
+        startRegPhase,
+        endRegPhase,
+        startVotingPhase,
+        endVotingPhase,
+        isFinalized,
+        registeredVoterCount,
+        votedVoterCount
+        );
     }
 
     /*
     * Returns the number of candidates.
     */
-    function getCandidateLength() returns (uint)
+    function getCandidateLength() public returns (uint)
     {
         return candidateIDs.length;
     }
 
-    /*
-    * Returns the count of registered voter addresses.
-    */
-    function getRegisteredVoterCount() returns (uint)
-    {
-        return registeredVoterCount;
-    }
-
-    /*
-    * Returns the count of voted voter addresses.
-    */
-    function getVotedVoterCount() returns (uint)
-    {
-        return votedVoterCount;
+    function getCandidateList() public returns (bytes32[]) {
+        return candidateIDs;
     }
 
     /*    *//*
@@ -221,30 +221,48 @@ contract BallotContract {
     * Returns the number of votes for a candidate at the specified index.
     * Throws if index out of bounds.
     */
-    function getCandidateVoteReceived(bytes32 _candidateID) returns (uint)
+    function getCandidateVoteCount(bytes32 _candidateID) public returns (uint)
     {
+        return voteReceived[_candidateID].length;
+    }
+    function getCandidateVoterList(bytes32 _candidateID) public returns (address[]) {
         return voteReceived[_candidateID];
     }
+
 
     /*
     * Returns if the voting options have been finalized.
     */
-    function getOptionsFinalized() returns (bool)
+    function isBallotFinalized() public returns (bool)
     {
-        return optionsFinalized;
+        return isFinalized;
     }
 
     /*
     * Returns the end time of the ballot in seconds since epoch.
     */
-    function getBallotEndTime() returns (uint)
+    function getStartRegPhase() public returns (uint)
     {
-        return ballotEndTime;
+        return startRegPhase;
     }
 
-    function getBallotStartTime() returns (uint)
+    function getEndRegPhase() public returns (uint)
     {
-        return ballotStartTime;
+        return endRegPhase;
+    }
+
+    function getStartVotingPhase() public returns (uint)
+    {
+        return startVotingPhase;
+    }
+
+    function getEndVotingPhase() public returns (uint)
+    {
+        return endVotingPhase;
+    }
+
+    function close() onlyOwner public {
+        selfdestruct(owner);
     }
 
 }

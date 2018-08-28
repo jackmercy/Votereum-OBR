@@ -14,7 +14,7 @@ import votingJson from './truffle/build/contracts/BallotContract';
 
 /* Init variable */
 var app = express();
-var port = process.env.port || 3000;
+var port = process.env.port || 8080;
 /* Init variable */
 
 /* MongoDb */
@@ -70,7 +70,7 @@ app.use(function(err, req, res, next) {
     // set locals, only providing error in development
     res.locals.message = err.message;
     res.locals.error = req.app.get('env') === 'development' ? err : {};
-
+    console.log(err);
     // render the error page
     res.status(err.status || 500);
     res.render('error');
@@ -101,8 +101,11 @@ global.ballotContract = new web3.eth.Contract(
     contractOption);
 
 //Ganache
-/*global.web3 = new Web3('http://localhost:9545');
-global.votingContract = new web3.eth.Contract(abiDefinition,'0x345ca3e014aaf5dca488057592ee47305d9b3e10');*/
+/*global.web3 = new Web3('http://localhost:8545');
+global.ballotContract = new web3.eth.Contract(
+    abiDefinition,
+    "0x345ca3e014aaf5dca488057592ee47305d9b3e10",
+    contractOption);*/
 
 
 if (web3) {
