@@ -81,24 +81,57 @@ function postBallotInfo(req, res) {
     "votedVoterCount": "0"
 }
 */
-function getBallotInfo(req, res) {
-    ballotContract.methods.getBallotInfo().call()
-        .then(function (data) {
-            const ballotInfo = {
-                ballotName: hexToString(data[0]),
-                startRegPhase: data[1],
-                endRegPhase: data[2],
-                startVotingPhase: data[3],
-                endVotingPhase: data[4],
-                isFinalized: data[5],
-                registeredVoterCount: data[6],
-                votedVoterCount: data[7]
-            };
+function getBallotInfo() {
+    amqpConn.createChannel(function(err, ch) {
+        var q = 'citizen_queue';
 
-            res.json(ballotInfo);
-        }).catch(function (error) {
-            res.send(error);
+        ch.assertQueue(q, {durable: false});
+        /* We might want to run more than one server process.
+        In order to spread the load equally over multiple servers
+        we need to set the prefetch setting on channel.*/
+        ch.prefetch(1);
+        console.log(' [AMQP] Awaiting Citizen requests');
+
+        /* use Channel.consume to consume messages from the queue.
+        Then enter the callback function where do the work
+        and send the response back.*/
+        ch.consume(q, function reply(msg) {
+            console.log('[x] consume request from API isAccountUnlocked()');
+
+            ballotContract.methods.getBallotInfo().call()
+                .then(function (data) {
+                    const ballotInfo = {
+                        ballotName: hexToString(data[0]),
+                        startRegPhase: data[1],
+                        endRegPhase: data[2],
+                        startVotingPhase: data[3],
+                        endVotingPhase: data[4],
+                        isFinalized: data[5],
+                        registeredVoterCount: data[6],
+                        votedVoterCount: data[7]
+                    };
+
+                    ch.sendToQueue(
+                        msg.properties.replyTo,
+                        new Buffer(JSON.stringify(ballotInfo)),
+                        {
+                            correlationId: msg.properties.correlationId
+                        }
+                    );
+                }).catch(function (error) {
+                    ch.sendToQueue(
+                        msg.properties.replyTo,
+                        new Buffer(JSON.stringify(error)),
+                        {
+                            correlationId: msg.properties.correlationId
+                        }
+                    );
+            });
+            ch.ack(msg);
         });
+    });
+
+
 }
 
 /*GET: [/api/contract/close]*/
