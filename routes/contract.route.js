@@ -1,31 +1,32 @@
 import express from 'express';
-import ContractController from '../controllers/contract.controller';
+
+import BallotController from '../controllers/ballot.controller';
 
 const router = express.Router();
 
 /* Base route: [/api/contract] */
 
 router.route('/')
-    .post(ContractController.postBallotInfo);
+    .post(BallotController.postBallotInfo);
 
 router.route('/')
-    .get(ContractController.getBallotInfo);
+    .get(BallotController.getBallotInfo);
 
 router.route('/close')
-    .get(ContractController.getCloseBallot);
+    .get(BallotController.getCloseBallot);
 
 router.route('/candidate')
-    .post(ContractController.postCandidates);
+    .post(BallotController.postCandidates);
 
 router.route('/candidate')
-    .get(ContractController.getCandidates);
+    .get(BallotController.getCandidates);
 
 router.route('/candidate/result')
-    .post(ContractController.postCandidateVoterList);
+    .post(BallotController.postCandidateVoterList);
 
 router.route('/voteForCandidates')
-    .post(ContractController.postVoteForCandidates);
+    .post(BallotController.postVoteForCandidates);
 
-router.route('/test').get(ContractController.test);
+router.route('/test').get(BallotController.test);
 
 export default router;

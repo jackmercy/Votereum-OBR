@@ -62,7 +62,8 @@ function isAccountUnlocked() {
                             correlationId: msg.properties.correlationId
                         }
                     );
-                }).catch((error) => {
+                })
+                .catch((error) => {
                     console.log(error);
                     var error_msg = {
                         message: 'error'
