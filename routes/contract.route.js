@@ -13,16 +13,16 @@ router.route('/')
     .get(BallotController.getBallotInfo);
 
 router.route('/close')
-    .get(BallotController.getCloseBallot);
+    .post(BallotController.postCloseBallot);
 
-router.route('/candidate')
-    .post(BallotController.postCandidates);
+/*router.route('/candidate')
+    .post(BallotController.postCandidates);*/
 
 router.route('/candidate')
     .get(BallotController.getCandidates);
 
 router.route('/candidate/result')
-    .post(BallotController.postCandidateVoterList);
+    .post(BallotController.postCandidateResult);
 
 router.route('/voteForCandidates')
     .post(BallotController.postVoteForCandidates);

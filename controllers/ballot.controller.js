@@ -45,8 +45,15 @@ function isAccountUnlocked(time) {
             return false;
         });
 }
+
+function isValidAddress(address) {
+    return web3.utils.isAddress(address);
+}
 /*-------------------------------------*/
 
+
+
+/*--------------EA Section-----------------*/
 /*
 - GET: [/api/contract]
 - Response:
@@ -190,9 +197,10 @@ function postBallotInfo() {
     });
 }
 
-/*GET: [/api/contract/close]*/
-function getCloseBallot() {
-    var method = 'getCloseBallot';
+
+/* - POST: [/api/contract/close]*/
+function postCloseBallot() {
+    var method = 'postCloseBallot';
     var ballotQueue = 'ballot_queue.' + method;
     amqpConn.createChannel(function (err, ch) {
         ch.assertQueue(ballotQueue, { durable: false });
@@ -201,11 +209,14 @@ function getCloseBallot() {
         ch.consume(ballotQueue, async function reply(msg) {
             console.log('[x] consume request from API ' + method + '()');
 
+            var data = JSON.parse(msg.content.toString());
+            const phrase = convertToBytes32(data['phrase'].toLowerCase().trim());
+
             //-----Request + response handle here------
             var isUnlocked = await isAccountUnlocked(600);
 
             if (isUnlocked) {
-                ballotContract.methods.close().send(options)
+                ballotContract.methods.close(phrase).send(options)
                     .on('transactionHash', function (hash) {
                         ch.sendToQueue(
                             msg.properties.replyTo,
@@ -241,7 +252,7 @@ function getCloseBallot() {
     "candidates": [ "1000", "1002", "1003"]
 }
 */
-function postCandidates(req, res) {
+function postCandidates() {
     var method = 'postCandidates';
     var ballotQueue = 'ballot_queue.' + method;
 
@@ -255,7 +266,7 @@ function postCandidates(req, res) {
             //-----Request + response handle here------
             var data = JSON.parse(msg.content.toString());
 
-            var candidates = data['candidates'];
+            var candidates = data['candidateIDs'];
             candidates = candidates.map(candidate => convertToBytes32(candidate));
 
             var isUnlocked = await isAccountUnlocked(600);
@@ -291,6 +302,7 @@ function postCandidates(req, res) {
     });
 }
 
+
 /*
 - GET: [/api/contract/candidate]
 - Response:
@@ -303,7 +315,7 @@ function postCandidates(req, res) {
     ]
 }
 */
-function getCandidates(req, res) {
+function getCandidates() {
     var method = 'getCandidates';
     var ballotQueue = 'ballot_queue.' + method;
 
@@ -347,22 +359,334 @@ function getCandidates(req, res) {
 
 }
 
+
+/*
+- GET: [/api/contract/ballot/isFinalized]
+- Response:
+{
+    "isFinalized": true
+}
+*/
+function getIsFinalized() {
+    var method = 'getIsFinalized';
+    var ballotQueue = 'ballot_queue.' + method;
+
+    amqpConn.createChannel(function (err, ch) {
+        ch.assertQueue(ballotQueue, { durable: false });
+        ch.prefetch(1);
+        console.log(' [AMQP] Awaiting ' + method + ' requests');
+        ch.consume(ballotQueue, async function reply(msg) {
+            console.log('[x] consume request from API ' + method + '()');
+
+            //-----Request + response handle here------
+            ballotContract.methods.isBallotFinalized().call()
+                .then(function (result) {
+                    const response = {
+                        isFinalized: result
+                    }
+                    ch.sendToQueue(
+                        msg.properties.replyTo,
+                        new Buffer(JSON.stringify(getResponseObject(response))),
+                        {
+                            correlationId: msg.properties.correlationId
+                        }
+                    );
+                })
+                .catch(function (error) {
+                    ch.sendToQueue(
+                        msg.properties.replyTo,
+                        new Buffer(JSON.stringify(getErrorObject(error.message))),
+                        {
+                            correlationId: msg.properties.correlationId
+                        }
+                    );
+                });
+            //--------------------------------------
+
+            ch.ack(msg);
+        });
+    });
+
+
+}
+
+
+/*
+- POST: [/api/ballot/finalize]
+- req.body:
+{
+    "phrase": "finalize"
+}
+- Response:
+{
+    "0xb69748c2df17e870b48366ca06942140071b5cb0d0f7757791134336dfa80716"
+}
+*/
+function postFinalizeBallot() {
+    var method = 'postFinalizeBallot';
+    var ballotQueue = 'ballot_queue.' + method;
+
+    amqpConn.createChannel(function (err, ch) {
+        ch.assertQueue(ballotQueue, { durable: false });
+        ch.prefetch(1);
+        console.log(' [AMQP] Awaiting ' + method + ' requests');
+        ch.consume(ballotQueue, async function reply(msg) {
+            console.log('[x] consume request from API ' + method + '()');
+
+            //-----Request + response handle here------
+            var data = JSON.parse(msg.content.toString());
+
+            const phrase = convertToBytes32(data['phrase'].toLowerCase().trim());
+
+
+            var isUnlocked = await isAccountUnlocked(600);
+
+            if (isUnlocked) {
+                console.log(isUnlocked);
+                ballotContract.methods.finalizeBallot(phrase)
+                    .send(options)
+                    .on('transactionHash', function (hash) {
+                        ch.sendToQueue(
+                            msg.properties.replyTo,
+                            new Buffer(JSON.stringify(getResponseObject(hash))),
+                            {
+                                correlationId: msg.properties.correlationId
+                            }
+                        );
+                    })
+                    .on('error', function (error) {
+                        ch.sendToQueue(
+                            msg.properties.replyTo,
+                            new Buffer(JSON.stringify(getErrorObject(error.message))),
+                            {
+                                correlationId: msg.properties.correlationId
+                            }
+                        );
+                    });
+            }
+
+            //--------------------------------------
+
+            ch.ack(msg);
+        });
+    });
+}
+
+/*
+- POST: [/api/ballot/finalize]
+- req.body:
+{
+    "voterAddress": "0x11a4c82c1e5CBE015c6d09df2F30fD1668a5E410"
+}
+- Response:
+{
+    "0xb69748c2df17e870b48366ca06942140071b5cb0d0f7757791134336dfa80716"
+}
+*/
+function postGiveRightToVote() {
+    var method = 'postGiveRightToVote';
+    var ballotQueue = 'ballot_queue.' + method;
+
+    amqpConn.createChannel(function (err, ch) {
+        ch.assertQueue(ballotQueue, { durable: false });
+        ch.prefetch(1);
+        console.log(' [AMQP] Awaiting ' + method + ' requests');
+        ch.consume(ballotQueue, async function reply(msg) {
+            console.log('[x] consume request from API ' + method + '()');
+
+            //-----Request + response handle here------
+            var data = JSON.parse(msg.content.toString());
+
+            var address = data['voterAddress'];
+
+            var isUnlocked = await isAccountUnlocked(600);
+
+            if (!isValidAddress(address)) {
+                ch.sendToQueue(
+                    msg.properties.replyTo,
+                    new Buffer(JSON.stringify(getErrorObject('Invalid address'))),
+                    {
+                        correlationId: msg.properties.correlationId
+                    }
+                );
+                ch.ack(msg);
+                return;
+            }
+            if (isUnlocked) {
+
+                ballotContract.methods.giveRightToVote(address).send(options)
+                    .on('transactionHash', function (hash) {
+                        ch.sendToQueue(
+                            msg.properties.replyTo,
+                            new Buffer(JSON.stringify(getResponseObject(hash))),
+                            {
+                                correlationId: msg.properties.correlationId
+                            }
+                        );
+                    })
+                    .on('error', function (error) {
+                        ch.sendToQueue(
+                            msg.properties.replyTo,
+                            new Buffer(JSON.stringify(getErrorObject(error.message))),
+                            {
+                                correlationId: msg.properties.correlationId
+                            }
+                        );
+                    });
+            }
+
+            //--------------------------------------
+
+            ch.ack(msg);
+        });
+    });
+}
+
+
+/*
+- POST: [/api/ballot/hasRight]
+- req.body:
+{
+    "voterAddress": "0x11a4c82c1e5CBE015c6d09df2F30fD1668a5E410"
+}
+- Response:
+{
+    "hasRight": true
+}
+*/
+function postHasRightToVote() {
+    var method = 'postHasRightToVote';
+    var ballotQueue = 'ballot_queue.' + method;
+
+    amqpConn.createChannel(function (err, ch) {
+        ch.assertQueue(ballotQueue, { durable: false });
+        ch.prefetch(1);
+        console.log(' [AMQP] Awaiting ' + method + ' requests');
+        ch.consume(ballotQueue, async function reply(msg) {
+            console.log('[x] consume request from API ' + method + '()');
+
+            //-----Request + response handle here------
+            var data = JSON.parse(msg.content.toString());
+
+            var address = data['voterAddress']
+            if (!isValidAddress(address)) {
+                ch.sendToQueue(
+                    msg.properties.replyTo,
+                    new Buffer(JSON.stringify(getErrorObject('Invalid address'))),
+                    {
+                        correlationId: msg.properties.correlationId
+                    }
+                );
+                ch.ack(msg);
+                return;
+            }
+
+            ballotContract.methods.hasRightToVote(address).call()
+                .then(function (result) {
+                    const response = {
+                        hasRight: result
+                    }
+                    ch.sendToQueue(
+                        msg.properties.replyTo,
+                        new Buffer(JSON.stringify(getResponseObject(response))),
+                        {
+                            correlationId: msg.properties.correlationId
+                        }
+                    );
+                })
+                .catch(function (error) {
+                    ch.sendToQueue(
+                        msg.properties.replyTo,
+                        new Buffer(JSON.stringify(getErrorObject(error.message))),
+                        {
+                            correlationId: msg.properties.correlationId
+                        }
+                    );
+                });
+
+            //--------------------------------------
+
+            ch.ack(msg);
+        });
+    });
+}
+/*--------------End EA Section-----------------*/
+
+
+
+/*----------------General Section------------*/
+
 /*
 - POST: [/api/contract/candidate/result]
 - req.body:
 {
     "candidateID": "1001"
 }
+- Response:
+{
+    "voteCount": 12,
+    "whoVoted": [
+        "0x11a4c82c1e5CBE015c6d09df2F30fD1668a5E410",
+        "0x6123cFfB3dDDfEA5e4445e1C1b5D53f0F502725C"
+    ]
+}
 */
-function postCandidateVoterList(req, res) {
-    var id = req.body['candidateID'];
+function postCandidateResult() {
+    var method = 'postCandidateResult';
+    var ballotQueue = 'ballot_queue.' + method;
 
-    ballotContract.methods.getCandidateVoterList(convertToBytes32(id))
-        .call().then(function (result) {
-        console.log(result);
+    amqpConn.createChannel(function (err, ch) {
+        ch.assertQueue(ballotQueue, { durable: false });
+        ch.prefetch(1);
+        console.log(' [AMQP] Awaiting ' + method + ' requests');
+        ch.consume(ballotQueue, async function reply(msg) {
+            console.log('[x] consume request from API ' + method + '()');
+
+            //-----Request + response handle here------
+            var data = JSON.parse(msg.content.toString());
+
+            var isUnlocked = await isAccountUnlocked(600);
+
+            if (isUnlocked) {
+                console.log(isUnlocked);
+                ballotContract.methods.getCandidateResult(convertToBytes32(data['candidateID'])).call()
+                    .then(function (data) {
+                        const result = {
+                            voteCount: data[0],
+                            whoVoted: data[1]
+                        };
+
+                        ch.sendToQueue(
+                            msg.properties.replyTo,
+                            new Buffer(JSON.stringify(getResponseObject(result))),
+                            {
+                                correlationId: msg.properties.correlationId
+                            }
+                        );
+                    })
+                    .catch(function (error) {
+                        ch.sendToQueue(
+                            msg.properties.replyTo,
+                            new Buffer(JSON.stringify(getErrorObject(error.message))),
+                            {
+                                correlationId: msg.properties.correlationId
+                            }
+                        );
+                    });
+            }
+
+            //--------------------------------------
+
+            ch.ack(msg);
+        });
     });
+
 }
 
+/*----------------End General Section------------*/
+
+
+/*-------------Voter Section------------------*/
 /*
 - POST: [/api/contract/voteForCandidates]
 - req.body:
@@ -370,23 +694,59 @@ function postCandidateVoterList(req, res) {
     "candidates": [ "1", "2", "3"]
 }
 */
-function postVoteForCandidates(req, res) {
-    var data = req.body;
-    var candidates = data['candidates'];
-    candidates = candidates.map(candidate => convertToBytes32(candidate));
+function postVoteForCandidates() {
 
-    ballotContract.methods.voteForCandidates(candidates)
-        .send(options)
-        .on('transactionHash', function (hash) {
-            res.send(hash);
-        })
-        .on('error', function (error) {
-            console.log(error);
+    var method = 'postVoteForCandidates';
+    var ballotQueue = 'ballot_queue.' + method;
+
+    amqpConn.createChannel(function (err, ch) {
+        ch.assertQueue(ballotQueue, { durable: false });
+        ch.prefetch(1);
+        console.log(' [AMQP] Awaiting ' + method + ' requests');
+        ch.consume(ballotQueue, async function reply(msg) {
+            console.log('[x] consume request from API ' + method + '()');
+
+            //-----Request + response handle here------
+            var data = JSON.parse(msg.content.toString());
+
+            var candidates = data['candidateIDS'];
+            candidates = candidates.map(candidate => convertToBytes32(candidate));
+
+            var isUnlocked = await isAccountUnlocked(600);
+
+            if (isUnlocked) {
+                console.log(isUnlocked);
+                ballotContract.methods.voteForCandidates(candidates).send(options)
+                    .then(function (data) {
+                        const result = {
+                            voteCount: data[0],
+                            whoVoted: data[1]
+                        };
+
+                        ch.sendToQueue(
+                            msg.properties.replyTo,
+                            new Buffer(JSON.stringify(getResponseObject(result))),
+                            {
+                                correlationId: msg.properties.correlationId
+                            }
+                        );
+                    })
+                    .catch(function (error) {
+                        ch.sendToQueue(
+                            msg.properties.replyTo,
+                            new Buffer(JSON.stringify(getErrorObject(error.message))),
+                            {
+                                correlationId: msg.properties.correlationId
+                            }
+                        );
+                    });
+            }
+
+            //--------------------------------------
+
+            ch.ack(msg);
         });
-}
-
-function postSend() {
-
+    });
 }
 
 /*-------------Voter section -----------------*/
@@ -425,7 +785,7 @@ function unlockAccount(address, key, time) {
 
 
 
-async function test(req, res) {
+async function test() {
     var isUnlock = await isAccountUnlocked(600);
     if (isUnlock) {
         console.log('unlocked')
@@ -458,8 +818,15 @@ export default {
     getBallotInfo,
     postCandidates,
     getCandidates,
-    postCandidateVoterList,
+    getIsFinalized,
+    postFinalizeBallot,
+    postCloseBallot,
+    postGiveRightToVote,
+    postHasRightToVote,
+
+    postCandidateResult,
+
     postVoteForCandidates,
-    getCloseBallot,
+
     test
 };

@@ -49,7 +49,7 @@ function startAMQP() {
 }
 
 /* Routes ---------------------- */
-app.use('/api', router);
+//app.use('/api', router);
 /* Routes ---------------------- */
 
 function setupAMQPControllers() {
@@ -63,9 +63,16 @@ function setupAMQPControllers() {
 
     BallotController.getBallotInfo();
     BallotController.postBallotInfo();
-    BallotController.getCloseBallot();
+    BallotController.postCloseBallot();
     BallotController.postCandidates();
     BallotController.getCandidates();
+    BallotController.getIsFinalized();
+    BallotController.postFinalizeBallot();
+    BallotController.postGiveRightToVote();
+    BallotController.postHasRightToVote();
+
+
+    BallotController.postCandidateResult();
 }
 
 

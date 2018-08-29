@@ -30,6 +30,12 @@ contract BallotContract {
         owner                   = msg.sender;       // Set the owner to the address creating the contract.
     }
 
+    function close(bytes32 phrase) onlyOwner public {
+        require( keccak256(phrase) == keccak256('close'));
+        selfdestruct(owner);
+    }
+
+
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Validator ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
     function validTime() private view returns (bool) {
@@ -37,14 +43,14 @@ contract BallotContract {
             return false;
     }
 
-    function canVote(Voter _voter) private view returns (bool) {
+    function canVote(address voterAddress) private view returns (bool) {
         if (isFinalized == false)       // If the options are not finalized, we cannot vote.
             return false;
 
-        if (_voter.eligibleToVote == false)
+        if (voters[voterAddress].eligibleToVote == false)
             return false;
 
-        if (_voter.isVoted == true) // If the voter has already voted, voter cannot vote anymore
+        if (voters[voterAddress].isVoted == true) // If the voter has already voted, voter cannot vote anymore
             return false;
         return true;
     }
@@ -101,9 +107,9 @@ contract BallotContract {
     *  and allow votes to be cast.
     *  NOTE: this can only be called by the ballot owner.
     */
-    function finalizeBallot() onlyOwner public
-    {
+    function finalizeBallot(bytes32 phrase) onlyOwner public {
         require(candidateIDs.length > 2);
+        require( keccak256(phrase) == keccak256('finalize'));
 
         isFinalized = true;    // Stop the addition of any more change.
     }
@@ -157,9 +163,8 @@ contract BallotContract {
     *        revert all changes.
     */
     function voteForCandidates(bytes32[] _candidateIDs) public {
-        Voter memory voter = voters[msg.sender];    // Get the Voter struct for this sender.
-
-
+        require(validTime());
+        require(canVote(msg.sender));
 
         for (uint i = 0; i < _candidateIDs.length; i++) {
             voteForCandidate(_candidateIDs[i]);
@@ -174,6 +179,14 @@ contract BallotContract {
             }
         }
         return false;
+    }
+
+    function hasRightToVote(address voterAddress) public view returns (bool) {
+        if (voters[voterAddress].eligibleToVote && voters[voterAddress].isVoted) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Getter Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
@@ -221,13 +234,12 @@ contract BallotContract {
     * Returns the number of votes for a candidate at the specified index.
     * Throws if index out of bounds.
     */
-    function getCandidateVoteCount(bytes32 _candidateID) public returns (uint)
+    function getCandidateResult(bytes32 _candidateID) public returns (uint, address[])
     {
-        return voteReceived[_candidateID].length;
+        return (voteReceived[_candidateID].length, voteReceived[_candidateID]);
     }
-    function getCandidateVoterList(bytes32 _candidateID) public returns (address[]) {
-        return voteReceived[_candidateID];
-    }
+
+    // Return a list of people who have voted for candidate
 
 
     /*
@@ -238,31 +250,9 @@ contract BallotContract {
         return isFinalized;
     }
 
-    /*
-    * Returns the end time of the ballot in seconds since epoch.
-    */
-    function getStartRegPhase() public returns (uint)
-    {
-        return startRegPhase;
+    function getVotedForList(address voterAddress) public returns (bytes32[]) {
+        return voters[voterAddress].votedFor;
     }
 
-    function getEndRegPhase() public returns (uint)
-    {
-        return endRegPhase;
-    }
-
-    function getStartVotingPhase() public returns (uint)
-    {
-        return startVotingPhase;
-    }
-
-    function getEndVotingPhase() public returns (uint)
-    {
-        return endVotingPhase;
-    }
-
-    function close() onlyOwner public {
-        selfdestruct(owner);
-    }
 
 }
