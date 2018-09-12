@@ -70,10 +70,11 @@ contract BallotContract {
     bool    isFinalized;       // Whether the owner can still add voting options.
     uint    registeredVoterCount;   // Total number of voter addresses registered.
     uint    votedVoterCount;
+    uint    fundedVoterCount;
 
     //
     bytes32[] candidateIDs;
-    mapping (bytes32 => address[]) voteReceived; //map candidateId to array of address that voted for them
+    mapping (bytes32 => address[]) voteReceived; //map candidateId to array of address of whom has voted for them
 
     function setupBallot (bytes32 _ballotName, uint _startVotingPhase, uint _endVotingPhase,
                           uint _startRegPhase, uint _endRegPhase, bytes32[] _candidateIDs) onlyOwner public {
@@ -110,8 +111,39 @@ contract BallotContract {
     function finalizeBallot(bytes32 phrase) onlyOwner public {
         require(candidateIDs.length > 2);
         require( keccak256(phrase) == keccak256('finalize'));
+        require (now < startVotingPhase);
+        require (now > startRegPhase);
 
         isFinalized = true;    // Stop the addition of any more change.
+    }
+
+    function resetTime(bytes32 phrase) onlyOwner public returns(bytes32, bytes32, bytes32) {
+/*        if (keccak256(phrase) == keccak256('startRegPhase')) {
+            startRegPhase = 0;
+        }
+        if (keccak256(phrase) == keccak256('endRegPhase')) {
+            endRegPhase = 0;
+        }
+        if (keccak256(phrase) == keccak256('startVotingPhase')) {
+            startVotingPhase = 0;
+        }
+        if (keccak256(phrase) == keccak256('endVotingPhase')) {
+            endVotingPhase = 0;
+        }*/
+/*        if (keccak256(phrase) == keccak256('startregphase')) {
+            startRegPhase = 0;
+        }
+        if (keccak256(phrase) == keccak256('endRegPhase')) {
+            endRegPhase = 0;
+        }
+        if (keccak256(phrase) == keccak256('startVotingPhase')) {
+            startVotingPhase = 0;
+        }
+        if (keccak256(phrase) == keccak256('endVotingPhase')) {
+            endVotingPhase = 0;
+        }*/
+
+        return (keccak256(phrase), phrase, keccak256('startregphase'));
     }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Voting Options ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
@@ -125,6 +157,8 @@ contract BallotContract {
         bool isVoted;             // State of whether this voter has voted.
         bytes32[] votedFor;          // List candidates' ID this voter voted for.
     }
+
+    address[] voterAddressList;
     mapping(address => Voter) public voters; // State variable which maps any address to a 'Voter' struct.
 
     /*
@@ -136,6 +170,7 @@ contract BallotContract {
         require (now < endRegPhase, 'Ballot setup time has ended!');
         voters[_voter].eligibleToVote = true;
         registeredVoterCount += 1;      // Increment registered voters.
+        voterAddressList.push(_voter);
     }
 
     /*
@@ -146,11 +181,12 @@ contract BallotContract {
     */
     function voteForCandidate(bytes32 _candidateID) private
     {
-        Voter storage voter = voters[msg.sender];    // Get the Voter struct for this sender.
+        require(validTime());
+        require(canVote(msg.sender));// Get the Voter struct for this sender.
 
-        voter.isVoted = true;
+        voters[msg.sender].isVoted = true;
         votedVoterCount += 1;
-        voter.votedFor.push(_candidateID); //Add candidateID to list whom voter voted
+        voters[msg.sender].votedFor.push(_candidateID); //Add candidateID to list whom voter voted
         voteReceived[_candidateID].push(msg.sender);
     }
 
@@ -252,6 +288,10 @@ contract BallotContract {
 
     function getVotedForList(address voterAddress) public returns (bytes32[]) {
         return voters[voterAddress].votedFor;
+    }
+
+    function getVoterAddressList() onlyOwner public  returns (address[]) {
+        return voterAddressList;
     }
 
 

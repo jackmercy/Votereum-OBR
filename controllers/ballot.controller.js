@@ -134,7 +134,7 @@ Condition: startRegPhase < endRegPhase < startVotingPhase < endVotingPhase
     "endRegPhase": "1543049100",
     "startVotingPhase": "1543050000",
     "endVotingPhase": "1543080000",
-    "candidateIDs": [
+    "candidateIds": [
         "1",
         "2",
         "3",
@@ -156,7 +156,7 @@ function postBallotInfo() {
             //-----Request + response handle here------
             var data = JSON.parse(msg.content.toString());
 
-            var candidateIDs = data['candidateIDs'].map(candidate => convertToBytes32(candidate));
+            var candidateIds = data['candidateIds'].map(candidate => convertToBytes32(candidate));
 
             var isUnlocked = await isAccountUnlocked(600);
 
@@ -168,7 +168,7 @@ function postBallotInfo() {
                     data['endRegPhase'],
                     data['startVotingPhase'],
                     data['endVotingPhase'],
-                    candidateIDs
+                    candidateIds
                 ).send(options)
                     .on('transactionHash', function (hash) {
                         ch.sendToQueue(
@@ -266,7 +266,7 @@ function postCandidates() {
             //-----Request + response handle here------
             var data = JSON.parse(msg.content.toString());
 
-            var candidates = data['candidateIDs'];
+            var candidates = data['candidateIds'];
             candidates = candidates.map(candidate => convertToBytes32(candidate));
 
             var isUnlocked = await isAccountUnlocked(600);
@@ -304,10 +304,10 @@ function postCandidates() {
 
 
 /*
-- GET: [/api/contract/candidate]
+- GET: [/api/ballot/candidate]
 - Response:
 {
-    "candidates": [
+    "candidateIds": [
         "1",
         "2",
         "3",
@@ -331,7 +331,7 @@ function getCandidates() {
                 .then(function (result) {
                     var candidates = result.map(value => hexToString(value));
                     var response = {
-                        candidates: candidates
+                        candidateIds: candidates
                     };
                     ch.sendToQueue(
                         msg.properties.replyTo,
@@ -437,6 +437,7 @@ function postFinalizeBallot() {
             var data = JSON.parse(msg.content.toString());
 
             const phrase = convertToBytes32(data['phrase'].toLowerCase().trim());
+            console.log(phrase);
 
 
             var isUnlocked = await isAccountUnlocked(600);
@@ -608,6 +609,145 @@ function postHasRightToVote() {
 
             ch.ack(msg);
         });
+    });
+}
+
+/*
+- GET: [/api/ballot/voterAddressList]
+- Response:
+{
+    "voterAddressList": [
+        "0x11a4c82c1e5CBE015c6d09df2F30fD1668a5E410",
+        "0x11a4c82c1e5CBE015c6d09df2F30fD1668a5E410"
+        "0x11a4c82c1e5CBE015c6d09df2F30fD1668a5E410"
+    ]
+}
+*/
+function getVoterAddressList() {
+    var method = 'getVoterAddressList';
+    var ballotQueue = 'ballot_queue.' + method;
+
+    amqpConn.createChannel(function (err, ch) {
+        ch.assertQueue(ballotQueue, { durable: false });
+        ch.prefetch(1);
+        console.log(' [AMQP] Awaiting ' + method + ' requests');
+        ch.consume(ballotQueue, async function reply(msg) {
+            console.log('[x] consume request from API ' + method + '()');
+
+            //-----Request + response handle here------
+
+            ballotContract.methods.getVoterAddressList().call()
+                .then(function (result) {
+                    const response = {
+                        voterAddressList: result
+                    }
+                    ch.sendToQueue(
+                        msg.properties.replyTo,
+                        new Buffer(JSON.stringify(getResponseObject(response))),
+                        {
+                            correlationId: msg.properties.correlationId
+                        }
+                    );
+                })
+                .catch(function (error) {
+                    ch.sendToQueue(
+                        msg.properties.replyTo,
+                        new Buffer(JSON.stringify(getErrorObject(error.message))),
+                        {
+                            correlationId: msg.properties.correlationId
+                        }
+                    );
+                });
+
+            //--------------------------------------
+
+            ch.ack(msg);
+        });
+    });
+}
+
+/*
+- POST: [/api/ballot/resetTime]
+- req.body:
+{
+    "phrase": "startRegPhase"
+}
+- Response:
+{
+    "0xb69748c2df17e870b48366ca06942140071b5cb0d0f7757791134336dfa80716"
+}
+*/
+function postResetTime() {
+    var method = 'postResetTime';
+    var ballotQueue = 'ballot_queue.' + method;
+
+    amqpConn.createChannel(function (err, ch) {
+        ch.assertQueue(ballotQueue, { durable: false });
+        ch.prefetch(1);
+        console.log(' [AMQP] Awaiting ' + method + ' requests');
+        ch.consume(ballotQueue, async function reply(msg) {
+            console.log('[x] consume request from API ' + method + '()');
+
+            //-----Request + response handle here------
+            var data = JSON.parse(msg.content.toString());
+
+            const phrase = convertToBytes32(data['phrase'].toLowerCase().trim());
+            console.log(phrase);
+
+
+            var isUnlocked = await isAccountUnlocked(600);
+
+            if (isUnlocked) {
+                console.log(isUnlocked);
+                /*                ballotContract.methods.resetTime(phrase)
+                                    .send(options)
+                                    .on('transactionHash', function (hash) {
+                                        ch.sendToQueue(
+                                            msg.properties.replyTo,
+                                            new Buffer(JSON.stringify(getResponseObject(hash))),
+                                            {
+                                                correlationId: msg.properties.correlationId
+                                            }
+                                        );
+                                    })
+                                    .on('error', function (error) {
+                                        ch.sendToQueue(
+                                            msg.properties.replyTo,
+                                            new Buffer(JSON.stringify(getErrorObject(error.message))),
+                                            {
+                                                correlationId: msg.properties.correlationId
+                                            }
+                                        );
+                                    });*/
+                ballotContract.methods.resetTime(phrase).call()
+                    .then(function (result) {
+                        const response = {
+                            voterAddressList: result[0],
+                            phrase: result[1],
+                            kecack: result[2]
+                        }
+                        ch.sendToQueue(
+                            msg.properties.replyTo,
+                            new Buffer(JSON.stringify(getResponseObject(response))),
+                            {
+                                correlationId: msg.properties.correlationId
+                            }
+                        );
+                    })
+                    .catch(function (error) {
+                        ch.sendToQueue(
+                            msg.properties.replyTo,
+                            new Buffer(JSON.stringify(getErrorObject(error.message))),
+                            {
+                                correlationId: msg.properties.correlationId
+                            }
+                        );
+                    });
+            }
+                //--------------------------------------
+
+                ch.ack(msg);
+            });
     });
 }
 /*--------------End EA Section-----------------*/
@@ -823,6 +963,7 @@ export default {
     postCloseBallot,
     postGiveRightToVote,
     postHasRightToVote,
+    postResetTime,
 
     postCandidateResult,
 

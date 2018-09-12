@@ -70,7 +70,7 @@ function setupAMQPControllers() {
     BallotController.postFinalizeBallot();
     BallotController.postGiveRightToVote();
     BallotController.postHasRightToVote();
-
+    BallotController.postResetTime();
 
     BallotController.postCandidateResult();
 }
