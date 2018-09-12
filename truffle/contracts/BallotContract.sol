@@ -6,7 +6,7 @@ pragma experimental ABIEncoderV2; // Allow passing struct as argument
 contract BallotContract {
 
 
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Contract Constructor ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Contract Constructor ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
     address owner;                  // The address of the owner. Set in 'Ballot()'
 
@@ -15,9 +15,8 @@ contract BallotContract {
     /*
     * Modifier to only allow the owner to call a function.
     */
-    modifier onlyOwner
-    {
-        require( msg.sender             == owner );
+    modifier onlyOwner {
+        require(msg.sender == owner );
         _;
 
     }
@@ -27,7 +26,7 @@ contract BallotContract {
     */
     constructor ()
     {
-        owner                   = msg.sender;       // Set the owner to the address creating the contract.
+        owner = msg.sender;       // Set the owner to the address creating the contract.
     }
 
     function close(bytes32 phrase) onlyOwner public {

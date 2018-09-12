@@ -95,7 +95,7 @@ var contractOption = {
 abiDefinition = votingJson.abi;
 
 //Testnet
- global.web3 = new Web3('http://localhost:8545');
+global.web3 = new Web3('http://localhost:8545');
 global.ballotContract = new web3.eth.Contract(
     abiDefinition,
     Config.CONTRACT_ADDRESS,

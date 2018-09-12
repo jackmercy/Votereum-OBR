@@ -1,2 +1,6 @@
-./truffle
-./node_modules
+/truffle/**
+/truffle/contracts/**
+/node_modules/**
+
+**/*.sol
+!.eslintrc.js
