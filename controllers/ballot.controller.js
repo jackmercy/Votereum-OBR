@@ -37,7 +37,7 @@ function getErrorObject(message) {
 }
 
 function isAccountUnlocked(time) {
-    return web3.eth.personal.unlockAccount(Config.OWNER, Config.KEY, time)
+    return web3.eth.personal.unlockAccount(Config.OWNER, Config.PASSWORD, time)
         .then(function (response) {
             return true;
         }).catch(function (error) {
