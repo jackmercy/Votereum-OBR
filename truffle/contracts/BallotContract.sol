@@ -8,9 +8,8 @@ contract BallotContract {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Contract Constructor ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
-    address owner;                  // The address of the owner. Set in 'Ballot()'
-
-
+    address owner;
+    uint256 storedAmount;
 
     /*
     * Modifier to only allow the owner to call a function.
@@ -30,8 +29,19 @@ contract BallotContract {
     }
 
     function close(bytes32 phrase) onlyOwner public {
-        require( keccak256(phrase) == keccak256('close'));
+        require( keccak256(phrase) == keccak256(bytes32('close')));
         selfdestruct(owner);
+    }
+
+    function () payable {
+        storedAmount = msg.value;
+    }
+    
+    function claimStoredAmount() onlyOwner {
+        require(now > endVotingPhase);
+        require(storedAmount > 0);
+
+        owner.transfer(storedAmount);
     }
 
 
@@ -70,6 +80,7 @@ contract BallotContract {
     uint    registeredVoterCount;   // Total number of voter addresses registered.
     uint    votedVoterCount;
     uint    fundedVoterCount;
+    uint    amount;
 
     //
     bytes32[] candidateIDs;
@@ -109,40 +120,27 @@ contract BallotContract {
     */
     function finalizeBallot(bytes32 phrase) onlyOwner public {
         require(candidateIDs.length > 2);
-        require( keccak256(phrase) == keccak256('finalize'));
+        require( keccak256(phrase) == keccak256(bytes32('finalize')));
         require (now < startVotingPhase);
         require (now > startRegPhase);
 
         isFinalized = true;    // Stop the addition of any more change.
     }
 
-    function resetTime(bytes32 phrase) onlyOwner public returns(bytes32, bytes32, bytes32) {
-/*        if (keccak256(phrase) == keccak256('startRegPhase')) {
+    function resetTime(bytes32 phrase) onlyOwner public returns(bool) {
+        if (keccak256(phrase) == keccak256(bytes32('startRegPhase'))) {
             startRegPhase = 0;
         }
-        if (keccak256(phrase) == keccak256('endRegPhase')) {
+        if (keccak256(phrase) == keccak256(bytes32('endRegPhase'))) {
             endRegPhase = 0;
         }
-        if (keccak256(phrase) == keccak256('startVotingPhase')) {
+        if (keccak256(phrase) == keccak256(bytes32('startVotingPhase'))) {
             startVotingPhase = 0;
         }
-        if (keccak256(phrase) == keccak256('endVotingPhase')) {
+        if (keccak256(phrase) == keccak256(bytes32('endVotingPhase'))) {
             endVotingPhase = 0;
-        }*/
-/*        if (keccak256(phrase) == keccak256('startregphase')) {
-            startRegPhase = 0;
         }
-        if (keccak256(phrase) == keccak256('endRegPhase')) {
-            endRegPhase = 0;
-        }
-        if (keccak256(phrase) == keccak256('startVotingPhase')) {
-            startVotingPhase = 0;
-        }
-        if (keccak256(phrase) == keccak256('endVotingPhase')) {
-            endVotingPhase = 0;
-        }*/
-
-        return (keccak256(phrase), phrase, keccak256('startregphase'));
+        return keccak256(phrase) == keccak256(bytes32('startRegPhase'));
     }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Voting Options ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
@@ -154,6 +152,7 @@ contract BallotContract {
     {
         bool eligibleToVote;    // Is this voter allowed to vote?
         bool isVoted;             // State of whether this voter has voted.
+        bool isFunded;
         bytes32[] votedFor;          // List candidates' ID this voter voted for.
     }
 
@@ -170,6 +169,17 @@ contract BallotContract {
         voters[_voter].eligibleToVote = true;
         registeredVoterCount += 1;      // Increment registered voters.
         voterAddressList.push(_voter);
+    }
+
+    function claimFund() public {
+        address _voter = msg.sender;
+        require(voters[_voter].eligibleToVote); // User alread had the right to vote
+        require((this).balance >= storedAmount);
+        require(!voters[_voter].isFunded);
+
+        voters[_voter].isFunded = true;
+        storedAmount -= amount;
+        voter.transfer(amount);
     }
 
     /*

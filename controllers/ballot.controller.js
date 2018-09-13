@@ -691,7 +691,7 @@ function postResetTime() {
             //-----Request + response handle here------
             var data = JSON.parse(msg.content.toString());
 
-            const phrase = convertToBytes32(data['phrase'].toLowerCase().trim());
+            const phrase = convertToBytes32(data['phrase'].trim());
             console.log(phrase);
 
 
@@ -699,42 +699,18 @@ function postResetTime() {
 
             if (isUnlocked) {
                 console.log(isUnlocked);
-                /*                ballotContract.methods.resetTime(phrase)
-                                    .send(options)
-                                    .on('transactionHash', function (hash) {
-                                        ch.sendToQueue(
-                                            msg.properties.replyTo,
-                                            new Buffer(JSON.stringify(getResponseObject(hash))),
-                                            {
-                                                correlationId: msg.properties.correlationId
-                                            }
-                                        );
-                                    })
-                                    .on('error', function (error) {
-                                        ch.sendToQueue(
-                                            msg.properties.replyTo,
-                                            new Buffer(JSON.stringify(getErrorObject(error.message))),
-                                            {
-                                                correlationId: msg.properties.correlationId
-                                            }
-                                        );
-                                    });*/
-                ballotContract.methods.resetTime(phrase).call()
-                    .then(function (result) {
-                        const response = {
-                            voterAddressList: result[0],
-                            phrase: result[1],
-                            kecack: result[2]
-                        }
+                ballotContract.methods.resetTime(phrase)
+                    .send(options)
+                    .on('transactionHash', function (hash) {
                         ch.sendToQueue(
                             msg.properties.replyTo,
-                            new Buffer(JSON.stringify(getResponseObject(response))),
+                            new Buffer(JSON.stringify(getResponseObject(hash))),
                             {
                                 correlationId: msg.properties.correlationId
                             }
                         );
                     })
-                    .catch(function (error) {
+                    .on('error', function (error) {
                         ch.sendToQueue(
                             msg.properties.replyTo,
                             new Buffer(JSON.stringify(getErrorObject(error.message))),
@@ -744,10 +720,10 @@ function postResetTime() {
                         );
                     });
             }
-                //--------------------------------------
+            //--------------------------------------
 
-                ch.ack(msg);
-            });
+            ch.ack(msg);
+        });
     });
 }
 /*--------------End EA Section-----------------*/
