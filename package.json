@@ -9,7 +9,9 @@
     "build": "babel -d dist",
     "debug": "babel-node --inspect --inspect-brk=9215 app.js",
     "truffle-compile": "cd ./truffle; truffle compile",
-    "truffle-migrate": "cd ./truffle; truffle migrate --reset"
+    "truffle-migrate": "cd ./truffle; truffle migrate --network rinkeby --reset",
+    "truffle-debug": "cd ./truffle; truffle debug --network rinkeby",
+    "truffle-console": "cd ./truffle; truffle console --network rinkeby"
   },
   "repository": {
     "type": "git",
