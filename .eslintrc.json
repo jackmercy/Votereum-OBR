@@ -69,5 +69,10 @@
             "check-type",
             "check-preblock"
         ]
-    }
+    },
+    "overrides": [
+        {
+            "files": ["*.sol"]
+        }
+    ]
 }

@@ -5,7 +5,7 @@
 /out-tsc
 /build
 /.compiled
-
+/truffle/build
 # dependencies
 /node_modules
 
