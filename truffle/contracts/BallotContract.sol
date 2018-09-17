@@ -31,18 +31,22 @@ contract BallotContract {
 
     function close(bytes32 phrase) onlyOwner public {
         require( keccak256(phrase) == keccak256(bytes32('close')));
+        //claimStoredAmount('claim');
+        require(storedAmount > 0);
+        owner.transfer(storedAmount);
         selfdestruct(owner);
     }
 
     function () payable {
         storedAmount = msg.value;
     }
-    
-    function claimStoredAmount() onlyOwner {
+
+    function claimStoredAmount(bytes32 phrase) onlyOwner {
         require(now > endVotingPhase);
         require(storedAmount > 0);
+        require(  keccak256(phrase) == keccak256(bytes32('claim')) );
 
-        owner.transfer(storedAmount);
+        owner.transfer(storedAmount); // Transfer back remaining amount
     }
 
 
@@ -81,7 +85,7 @@ contract BallotContract {
     uint    registeredVoterCount;   // Total number of voter addresses registered.
     uint    votedVoterCount;
     uint    fundedVoterCount;
-    uint    amount;
+    uint    amount; // in GWei
 
     //
     bytes32[] candidateIDs;
@@ -102,8 +106,15 @@ contract BallotContract {
         isFinalized = false;
         registeredVoterCount = 0;
         votedVoterCount = 0;
+        fundedVoterCount = 0;
+        storedAmount = 0;
+        amount = 0;
 
         addCandidates(_candidateIDs);
+    }
+
+    function setTransferAmount(uint _amount) {
+        amount = _amount*1000000000; //convert Gwei to wei
     }
 
 
@@ -164,8 +175,7 @@ contract BallotContract {
     *  Allow an address (voter) to vote on this ballot.
     *  NOTE: this can only be called by the ballot owner.
     */
-    function giveRightToVote(address _voter) onlyOwner public
-    {
+    function giveRightToVote(address _voter) onlyOwner public {
         require (now < endRegPhase, 'Ballot setup time has ended!');
         voters[_voter].eligibleToVote = true;
         registeredVoterCount += 1;      // Increment registered voters.
@@ -174,13 +184,13 @@ contract BallotContract {
 
     function claimFund() public {
         address _voter = msg.sender;
-        require(voters[_voter].eligibleToVote); // User alread had the right to vote
-        require((this).balance >= storedAmount);
+        require(voters[_voter].eligibleToVote); // User already had the right to vote
+        require(address(this).balance >= storedAmount);
         require(!voters[_voter].isFunded);
 
         voters[_voter].isFunded = true;
         storedAmount -= amount;
-        voter.transfer(amount);
+        _voter.transfer(amount);
     }
 
     /*
@@ -189,8 +199,7 @@ contract BallotContract {
     *  NOTE: if anything fails during this call we will throw and automatically
     *        revert all changes.
     */
-    function voteForCandidate(bytes32 _candidateID) private
-    {
+    function voteForCandidate(bytes32 _candidateID) private {
         require(validTime());
         require(canVote(msg.sender));// Get the Voter struct for this sender.
 
@@ -241,7 +250,7 @@ contract BallotContract {
     * Returns the ballots bytes32.
     */
     function getBallotInfo() public returns (
-        bytes32, uint, uint, uint, uint, bool, uint, uint
+        bytes32, uint, uint, uint, uint, bool, uint, uint, uint, uint
     ) {
         return (
         ballotName,
@@ -251,15 +260,17 @@ contract BallotContract {
         endVotingPhase,
         isFinalized,
         registeredVoterCount,
-        votedVoterCount
+        votedVoterCount,
+        storedAmount,
+        fundedVoterCount,
+        amount
         );
     }
 
     /*
     * Returns the number of candidates.
     */
-    function getCandidateLength() public returns (uint)
-    {
+    function getCandidateLength() public returns (uint)  {
         return candidateIDs.length;
     }
 

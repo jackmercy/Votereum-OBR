@@ -65,7 +65,9 @@ function isValidAddress(address) {
     "endVotingPhase": "1543049100",
     "isFinalized": false,
     "registeredVoterCount": "0",
-    "votedVoterCount": "0"
+    "votedVoterCount": "0",
+    "storedAmount": "0",
+    "fundedVoterCount": "0"
 }
 */
 function getBallotInfo() {
@@ -96,7 +98,9 @@ function getBallotInfo() {
                         endVotingPhase: data[4],
                         isFinalized: data[5],
                         registeredVoterCount: data[6],
-                        votedVoterCount: data[7]
+                        votedVoterCount: data[7],
+                        storedAmount: data[8],
+                        fundedVoterCount: data[9]
                     };
 
                     ch.sendToQueue(
@@ -726,6 +730,66 @@ function postResetTime() {
         });
     });
 }
+
+/*
+- POST: [/api/ballot/claimStoredAmount]
+- req.body:
+{
+    "phrase": "startRegPhase"
+}
+- Response:
+{
+    "0xb69748c2df17e870b48366ca06942140071b5cb0d0f7757791134336dfa80716"
+}
+*/
+function postClaimStoredAmount() {
+    var method = 'postClaimStoredAmount';
+    var ballotQueue = 'ballot_queue.' + method;
+
+    amqpConn.createChannel(function (err, ch) {
+        ch.assertQueue(ballotQueue, { durable: false });
+        ch.prefetch(1);
+        console.log(' [AMQP] Awaiting ' + method + ' requests');
+        ch.consume(ballotQueue, async function reply(msg) {
+            console.log('[x] consume request from API ' + method + '()');
+
+            //-----Request + response handle here------
+            var data = JSON.parse(msg.content.toString());
+
+            const phrase = convertToBytes32(data['phrase'].trim());
+
+            var isUnlocked = await isAccountUnlocked(600);
+
+            if (isUnlocked) {
+                ballotContract.methods.claimStoredAmount(phrase)
+                    .send(options)
+                    .on('transactionHash', function (hash) {
+                        ch.sendToQueue(
+                            msg.properties.replyTo,
+                            new Buffer(JSON.stringify(getResponseObject(hash))),
+                            {
+                                correlationId: msg.properties.correlationId
+                            }
+                        );
+                    })
+                    .on('error', function (error) {
+                        ch.sendToQueue(
+                            msg.properties.replyTo,
+                            new Buffer(JSON.stringify(getErrorObject(error.message))),
+                            {
+                                correlationId: msg.properties.correlationId
+                            }
+                        );
+                    });
+            }
+            //--------------------------------------
+
+            ch.ack(msg);
+        });
+    });
+}
+
+
 /*--------------End EA Section-----------------*/
 
 
@@ -803,11 +867,16 @@ function postCandidateResult() {
 
 
 /*-------------Voter Section------------------*/
+
 /*
 - POST: [/api/contract/voteForCandidates]
 - req.body:
 {
     "candidates": [ "1", "2", "3"]
+}
+- Response:
+{
+    "0xb69748c2df17e870b48366ca06942140071b5cb0d0f7757791134336dfa80716"
 }
 */
 function postVoteForCandidates() {
@@ -827,6 +896,65 @@ function postVoteForCandidates() {
 
             var candidates = data['candidateIDS'];
             candidates = candidates.map(candidate => convertToBytes32(candidate));
+
+            var isUnlocked = await isAccountUnlocked(600);
+
+            if (isUnlocked) {
+                console.log(isUnlocked);
+                ballotContract.methods.voteForCandidates(candidates).send(options)
+                    .then(function (data) {
+                        const result = {
+                            voteCount: data[0],
+                            whoVoted: data[1]
+                        };
+
+                        ch.sendToQueue(
+                            msg.properties.replyTo,
+                            new Buffer(JSON.stringify(getResponseObject(result))),
+                            {
+                                correlationId: msg.properties.correlationId
+                            }
+                        );
+                    })
+                    .catch(function (error) {
+                        ch.sendToQueue(
+                            msg.properties.replyTo,
+                            new Buffer(JSON.stringify(getErrorObject(error.message))),
+                            {
+                                correlationId: msg.properties.correlationId
+                            }
+                        );
+                    });
+            }
+
+            //--------------------------------------
+
+            ch.ack(msg);
+        });
+    });
+}
+
+/*
+- POST: [/api/contract/claimFund]
+- req.body: {}
+- Response:
+{
+    "0xb69748c2df17e870b48366ca06942140071b5cb0d0f7757791134336dfa80716"
+}
+*/
+function postClaimFund() {
+
+    var method = 'postClaimFund';
+    var ballotQueue = 'ballot_queue.' + method;
+
+    amqpConn.createChannel(function (err, ch) {
+        ch.assertQueue(ballotQueue, { durable: false });
+        ch.prefetch(1);
+        console.log(' [AMQP] Awaiting ' + method + ' requests');
+        ch.consume(ballotQueue, async function reply(msg) {
+            console.log('[x] consume request from API ' + method + '()');
+
+            //-----Request + response handle here------
 
             var isUnlocked = await isAccountUnlocked(600);
 
@@ -940,6 +1068,7 @@ export default {
     postGiveRightToVote,
     postHasRightToVote,
     postResetTime,
+    postClaimStoredAmount,
 
     postCandidateResult,
 
