@@ -58,16 +58,24 @@ function isValidAddress(address) {
 - GET: [/api/contract]
 - Response:
 {
-    "ballotName": "President Election",
-    "startRegPhase": "1543050000",
-    "endRegPhase": "1543080000",
-    "startVotingPhase": "1540370700",
-    "endVotingPhase": "1543049100",
-    "isFinalized": false,
-    "registeredVoterCount": "0",
-    "votedVoterCount": "0",
-    "storedAmount": "0",
-    "fundedVoterCount": "0"
+    "ballotInfo": {
+        "ballotName": "President Election",
+        "isFinalized": false,
+        "amount": 6000000000,
+        "storedAmount": 60000000000,
+        "address": "0x245fa4bafcd49393668490"
+    },
+    "phaseInfo": {
+        "startRegPhase": "1543050000",
+        "endRegPhase": "1543080000",
+        "startVotingPhase": "1540370700",
+        "endVotingPhase": "1543049100",
+    },
+    "voterInfo": {
+         "registeredVoterCount": "0",
+         "votedVoterCount": "0",
+         "fundedVoterCount": "0",
+    }
 }
 */
 function getBallotInfo() {
@@ -88,24 +96,38 @@ function getBallotInfo() {
         ch.consume(ballotQueue, function reply(msg) {
             console.log('[x] consume request from API ' + method + '()');
 
-            ballotContract.methods.getBallotInfo().call()
+            ballotContract.methods.getBallotOverview().call()
                 .then(function (data) {
                     const ballotInfo = {
                         ballotName: hexToString(data[0]),
-                        startRegPhase: data[1],
-                        endRegPhase: data[2],
-                        startVotingPhase: data[3],
-                        endVotingPhase: data[4],
-                        isFinalized: data[5],
-                        registeredVoterCount: data[6],
-                        votedVoterCount: data[7],
-                        storedAmount: data[8],
-                        fundedVoterCount: data[9]
+                        isFinalized: data[1],
+                        address: Config.CONTRACT_ADDRESS,
+                        amount: data[2],
+                        storedAmount: data[3]
                     };
+
+                    const phaseInfo = {
+                        startRegPhase: data[4],
+                        endRegPhase: data[5],
+                        startVotingPhase: data[6],
+                        endVotingPhase: data[7]
+                    };
+
+                    const voterInfo = {
+                        registeredVoterCount: data[8],
+                        votedVoterCount: data[9],
+                        fundedVoterCount: data[10]
+                    };
+
+                    const ballotOverview = {
+                        ballotInfo: ballotInfo,
+                        phaseInfo: phaseInfo,
+                        voterInfo: voterInfo
+                    }
 
                     ch.sendToQueue(
                         msg.properties.replyTo,
-                        new Buffer(JSON.stringify(getResponseObject(ballotInfo))),
+                        new Buffer(JSON.stringify(getResponseObject(ballotOverview))),
                         {
                             correlationId: msg.properties.correlationId
                         }
@@ -134,11 +156,13 @@ function getBallotInfo() {
 Condition: startRegPhase < endRegPhase < startVotingPhase < endVotingPhase
 {
     "ballotName": "President Election",
+    "fundAmount": 1000000,
+    "maxCandidate": 3,
     "startRegPhase": "1540370700",
     "endRegPhase": "1543049100",
     "startVotingPhase": "1543050000",
     "endVotingPhase": "1543080000",
-    "candidateIds": [
+    "candidateIDs": [
         "1",
         "2",
         "3",
@@ -168,6 +192,8 @@ function postBallotInfo() {
                 console.log(isUnlocked);
                 ballotContract.methods.setupBallot(
                     convertToBytes32(data['ballotName']),
+                    data['fundAmount'],
+                    data['maxCandidate'],
                     data['startRegPhase'],
                     data['endRegPhase'],
                     data['startVotingPhase'],

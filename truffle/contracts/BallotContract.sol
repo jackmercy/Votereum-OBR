@@ -26,11 +26,25 @@ contract BallotContract {
     constructor ()
     {
         owner = msg.sender;       // Set the owner to the address creating the contract.
+        ballotName = 'Not set';
+        maxCandidate = 0;
+
+        startRegPhase = 0;
+        endRegPhase = 0;
+        startVotingPhase = 0;
+        endVotingPhase = 0;
+
+        isFinalized = false;
+        registeredVoterCount = 0;
+        votedVoterCount = 0;
+        fundedVoterCount = 0;
+        storedAmount = 0;
+        amount = 0;
+
     }
 
     function close(bytes32 phrase) onlyOwner public {
         require( keccak256(phrase) == keccak256(bytes32('close')));
-        //claimStoredAmount('claim');
         require(storedAmount > 0);
         owner.transfer(storedAmount);
         selfdestruct(owner);
@@ -71,7 +85,8 @@ contract BallotContract {
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Ballot Options (Candidate) ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
 
-    bytes32  ballotName; // The ballot candidateID.
+    bytes32 ballotName; // The ballot candidateID.
+    uint    maxCandidate;
 
     // Time: seconds since 1970-01-01
     uint    startRegPhase;
@@ -90,13 +105,16 @@ contract BallotContract {
     bytes32[] candidateIDs;
     mapping (bytes32 => address[]) voteReceived; //map candidateId to array of address of whom has voted for them
 
-    function setupBallot (bytes32 _ballotName, uint _startVotingPhase, uint _endVotingPhase,
+    function setupBallot (bytes32 _ballotName, uint _fundAmount, uint _maxCandidate,
+        uint _startVotingPhase, uint _endVotingPhase,
                           uint _startRegPhase, uint _endRegPhase, bytes32[] _candidateIDs) onlyOwner public {
 
         require (now < _endRegPhase, 'Ballot setup time has ended!');
         require (isFinalized == false);
 
         ballotName = _ballotName;
+        amount = _fundAmount*1000000000; //convert to wei
+        maxCandidate = _maxCandidate;
         startRegPhase = _startRegPhase;
         endRegPhase = _endRegPhase;
         startVotingPhase = _startVotingPhase;
@@ -107,7 +125,6 @@ contract BallotContract {
         votedVoterCount = 0;
         fundedVoterCount = 0;
         storedAmount = 0;
-        amount = 0;
 
         addCandidates(_candidateIDs);
     }
@@ -248,21 +265,26 @@ contract BallotContract {
     /*
     * Returns the ballots bytes32.
     */
-    function getBallotInfo() public returns (
-        bytes32, uint, uint, uint, uint, bool, uint, uint, uint, uint
+    function getBallotOverview() public returns (
+        bytes32, bool, uint, uint, uint, uint, uint, uint, uint, uint, uint
     ) {
-        return (
+        return ( // Do not change the return order
+        /*Ballot Info*/
         ballotName,
+        isFinalized,
+        amount,
+        storedAmount,
+
+        /*Phase Info*/
         startRegPhase,
         endRegPhase,
         startVotingPhase,
         endVotingPhase,
-        isFinalized,
+
+        /*Voter Info*/
         registeredVoterCount,
         votedVoterCount,
-        storedAmount,
-        fundedVoterCount,
-        amount
+        fundedVoterCount
         );
     }
 
