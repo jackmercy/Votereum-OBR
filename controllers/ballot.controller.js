@@ -102,8 +102,8 @@ function getBallotInfo() {
                         ballotName: hexToString(data[0]),
                         isFinalized: data[1],
                         address: Config.CONTRACT_ADDRESS,
-                        amount: data[2],
-                        storedAmount: data[3]
+                        amount: Number(data[2]),
+                        storedAmount: Number(data[3])
                     };
 
                     const phaseInfo = {
