@@ -547,6 +547,7 @@ function postGiveRightToVote() {
 
                 ballotContract.methods.giveRightToVote(address).send(options)
                     .on('transactionHash', function (hash) {
+
                         ch.sendToQueue(
                             msg.properties.replyTo,
                             new Buffer(JSON.stringify(getResponseObject(hash))),

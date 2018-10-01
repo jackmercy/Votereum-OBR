@@ -109,9 +109,6 @@ contract BallotContract {
         uint _startVotingPhase, uint _endVotingPhase,
                           uint _startRegPhase, uint _endRegPhase, bytes32[] _candidateIDs) onlyOwner public {
 
-        require (now < _endRegPhase, 'Ballot setup time has ended!');
-        require (isFinalized == false);
-
         ballotName = _ballotName;
         amount = _fundAmount*1000000000; //convert to wei
         maxCandidate = _maxCandidate;
@@ -193,6 +190,7 @@ contract BallotContract {
     */
     function giveRightToVote(address _voter) onlyOwner public {
         require (now < endRegPhase, 'Ballot setup time has ended!');
+
         voters[_voter].eligibleToVote = true;
         registeredVoterCount += 1;      // Increment registered voters.
         voterAddressList.push(_voter);
