@@ -114,18 +114,9 @@ function getBallotInfo() {
                     };
 
                     const voterInfo = {
-                        registeredVoterCount: {
-                            name: 'Number of registered citizen',
-                            value: data[8]
-                        },
-                        votedVoterCount: {
-                            name: 'Voted citizen',
-                            value: data[9]
-                        },
-                        fundedVoterCount: {
-                            name: 'Funded citizen',
-                            value: data[10]
-                        }
+                        registeredVoterCount: data[8],
+                        votedVoterCount: data[9],
+                        fundedVoterCount: data[10]
                     };
 
                     const ballotOverview = {
