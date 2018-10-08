@@ -5,7 +5,7 @@ import EthereumTx from 'ethereumjs-tx';
 
 const options = {
     from: Config.OWNER,
-    gasPrice: 20000000000,
+    gasPrice: 2000000000,
     gas: 2000000
 };
 
@@ -100,23 +100,24 @@ function getBallotInfo() {
                 .then(function (data) {
                     const ballotInfo = {
                         ballotName: hexToString(data[0]),
-                        isFinalized: data[1],
+                        limitCandidate: Number(data[1]),
+                        isFinalized: data[2],
                         address: Config.CONTRACT_ADDRESS,
-                        amount: Number(data[2]),
-                        storedAmount: Number(data[3])
+                        amount: Number(data[3]),
+                        storedAmount: Number(data[4])
                     };
 
                     const phaseInfo = {
-                        startRegPhase: data[4],
-                        endRegPhase: data[5],
-                        startVotingPhase: data[6],
-                        endVotingPhase: data[7]
+                        startRegPhase: data[5],
+                        endRegPhase: data[6],
+                        startVotingPhase: data[7],
+                        endVotingPhase: data[8]
                     };
 
                     const voterInfo = {
-                        registeredVoterCount: data[8],
-                        votedVoterCount: data[9],
-                        fundedVoterCount: data[10]
+                        registeredVoterCount: data[9],
+                        votedVoterCount: data[10],
+                        fundedVoterCount: data[11]
                     };
 
                     const ballotOverview = {
@@ -157,7 +158,7 @@ Condition: startRegPhase < endRegPhase < startVotingPhase < endVotingPhase
 {
     "ballotName": "President Election",
     "fundAmount": 1000000,
-    "maxCandidate": 3,
+    "limitCandidate": 3,
     "startRegPhase": "1540370700",
     "endRegPhase": "1543049100",
     "startVotingPhase": "1543050000",
@@ -193,7 +194,7 @@ function postBallotInfo() {
                 ballotContract.methods.setupBallot(
                     convertToBytes32(data['ballotName']),
                     data['fundAmount'],
-                    data['maxCandidate'],
+                    data['limitCandidate'],
                     data['startRegPhase'],
                     data['endRegPhase'],
                     data['startVotingPhase'],
@@ -899,7 +900,23 @@ function postCandidateResult() {
 - POST: [/api/contract/voteForCandidates]
 - req.body:
 {
-    "candidates": [ "1", "2", "3"]
+    "citizenIds": "2321"
+    "chainPassword": "123465"
+    "candidateIds": [
+        "1145",
+        "0327",
+        "7272"
+    ]
+}
+- req.body to OBR: {
+    "citizenIds": "2321"
+    "address": "0x2123154"
+    "chainPassword": "123465"
+    "candidateIds": [
+        "1145",
+        "0327",
+        "7272"
+    ]
 }
 - Response:
 {
@@ -921,29 +938,47 @@ function postVoteForCandidates() {
             //-----Request + response handle here------
             var data = JSON.parse(msg.content.toString());
 
-            var candidates = data['candidateIDS'];
+            var candidates = data['candidateIds'];
             candidates = candidates.map(candidate => convertToBytes32(candidate));
 
-            var isUnlocked = await isAccountUnlocked(600);
+            web3.eth.getTransactionCount(data['address']).then(function (_nonce) {
+                const txObject = {
+                    from: data['address'],
+                    to: Config.CONTRACT_ADDRESS,
+                    gas: web3.utils.toHex(6000000),
+                    gasPrice: web3.utils.toHex(2000000000),
+                    value: web3.utils.toHex(0),
+                    data: voteForCandidateEncode(candidates),
+                    nonce: _nonce
+                };
 
-            if (isUnlocked) {
-                console.log(isUnlocked);
-                ballotContract.methods.voteForCandidates(candidates).send(options)
-                    .then(function (data) {
-                        const result = {
-                            voteCount: data[0],
-                            whoVoted: data[1]
-                        };
+                web3.eth.personal.signTransaction(txObject, data['chainPassword'])
+                    .then(result => {
+                        const raw = result['raw'];
+                        web3.eth.sendSignedTransaction(raw)
+                            .on('transactionHash', function (hash) {
+                                ch.sendToQueue(
+                                    msg.properties.replyTo,
+                                    new Buffer(JSON.stringify(getResponseObject(hash))),
+                                    {
+                                        correlationId: msg.properties.correlationId
+                                    }
+                                );
+                            })
+                            .on('error', function (error) {
+                                console.log(error + 'send transaction');
+                                ch.sendToQueue(
 
-                        ch.sendToQueue(
-                            msg.properties.replyTo,
-                            new Buffer(JSON.stringify(getResponseObject(result))),
-                            {
-                                correlationId: msg.properties.correlationId
-                            }
-                        );
+                                    msg.properties.replyTo,
+                                    new Buffer(JSON.stringify(getErrorObject(error.message))),
+                                    {
+                                        correlationId: msg.properties.correlationId
+                                    }
+                                );
+                            });
                     })
-                    .catch(function (error) {
+                    .catch(error => {
+                        console.log(error + 'signed transaction');
                         ch.sendToQueue(
                             msg.properties.replyTo,
                             new Buffer(JSON.stringify(getErrorObject(error.message))),
@@ -952,8 +987,44 @@ function postVoteForCandidates() {
                             }
                         );
                     });
-            }
+            });
 
+/*            console.log(txObject);
+            getSignedTransaction(txObject, data['chainPassword'])
+                .then(result => {
+                    const raw = result['rawTransaction'];
+                    web3.eth.sendSignedTransaction(raw)
+                        .on('transactionHash', function (hash) {
+                            ch.sendToQueue(
+                                msg.properties.replyTo,
+                                new Buffer(JSON.stringify(getResponseObject(hash))),
+                                {
+                                    correlationId: msg.properties.correlationId
+                                }
+                            );
+                        })
+                        .on('error', function (error) {
+                            console.log(error + 'send transaction');
+                            ch.sendToQueue(
+
+                                msg.properties.replyTo,
+                                new Buffer(JSON.stringify(getErrorObject(error.message))),
+                                {
+                                    correlationId: msg.properties.correlationId
+                                }
+                            );
+                        });
+                })
+                .catch(error => {
+                    console.log(error + 'signed transaction');
+                    ch.sendToQueue(
+                        msg.properties.replyTo,
+                        new Buffer(JSON.stringify(getErrorObject(error.message))),
+                        {
+                            correlationId: msg.properties.correlationId
+                        }
+                    );
+                });*/
             //--------------------------------------
 
             ch.ack(msg);
@@ -983,7 +1054,7 @@ function postClaimFund() {
 
             //-----Request + response handle here------
 
-            var isUnlocked = await isAccountUnlocked(600);
+
 
             if (isUnlocked) {
                 console.log(isUnlocked);
@@ -1031,19 +1102,25 @@ function voteForCandidateEncode(_candidates) {
 
 //Generate trasactionObject
 function getTransactionObject(_from, _to, _gas, _gasPrice, _value, _data) {
-    return {
-        from: _from,
-        to: _to,
-        gas: web3.utils.toHex(_gas),
-        gasPrice: web3.utils.toHex(_gasPrice),
-        value: web3.utils.toHex(_value),
-        data: _data
-    };
+    let txObject;
+    web3.eth.getTransactionCount(_from).then(function (value) {
+        txObject = {
+            from: _from,
+            to: _to,
+            gas: web3.utils.toHex(_gas),
+            gasPrice: web3.utils.toHex(_gasPrice),
+            value: web3.utils.toHex(_value),
+            data: _data,
+            nonce: value
+        };
+        return txObject;
+    });
+
 }
 
 //Sign transaction
-function getSignedTransaction(_txObject, _key) {
-    return web3.eth.accounts.signTransaction(_txObject, _key);
+function getSignedTransaction(_txObject, _password) {
+    return web3.eth.personal.signTransaction(_txObject, _password);
 }
 
 function createAccount() {

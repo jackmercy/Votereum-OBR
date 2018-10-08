@@ -27,7 +27,7 @@ contract BallotContract {
     {
         owner = msg.sender;       // Set the owner to the address creating the contract.
         ballotName = 'Not set';
-        maxCandidate = 0;
+        limitCandidate = 0;
 
         startRegPhase = 0;
         endRegPhase = 0;
@@ -38,7 +38,7 @@ contract BallotContract {
         registeredVoterCount = 0;
         votedVoterCount = 0;
         fundedVoterCount = 0;
-        storedAmount = 0;
+        storedAmount = address(this).balance;
         amount = 0;
 
     }
@@ -68,6 +68,7 @@ contract BallotContract {
     function validTime() private view returns (bool) {
         if ( now > endVotingPhase || now < startVotingPhase)
             return false;
+        return true;
     }
 
     function canVote(address voterAddress) private view returns (bool) {
@@ -86,7 +87,7 @@ contract BallotContract {
 
 
     bytes32 ballotName; // The ballot candidateID.
-    uint    maxCandidate;
+    uint    limitCandidate;
 
     // Time: seconds since 1970-01-01
     uint    startRegPhase;
@@ -105,13 +106,13 @@ contract BallotContract {
     bytes32[] candidateIDs;
     mapping (bytes32 => address[]) voteReceived; //map candidateId to array of address of whom has voted for them
 
-    function setupBallot (bytes32 _ballotName, uint _fundAmount, uint _maxCandidate,
+    function setupBallot (bytes32 _ballotName, uint _fundAmount, uint _limitCandidate,
         uint _startVotingPhase, uint _endVotingPhase,
                           uint _startRegPhase, uint _endRegPhase, bytes32[] _candidateIDs) onlyOwner public {
 
         ballotName = _ballotName;
         amount = _fundAmount*1000000000; //convert to wei
-        maxCandidate = _maxCandidate;
+        limitCandidate = _limitCandidate;
         startRegPhase = _startRegPhase;
         endRegPhase = _endRegPhase;
         startVotingPhase = _startVotingPhase;
@@ -121,7 +122,7 @@ contract BallotContract {
         registeredVoterCount = 0;
         votedVoterCount = 0;
         fundedVoterCount = 0;
-        storedAmount = 0;
+        storedAmount = address(this).balance;
 
         addCandidates(_candidateIDs);
     }
@@ -190,14 +191,19 @@ contract BallotContract {
     */
     function giveRightToVote(address _voter) onlyOwner public {
         require (now < endRegPhase, 'Ballot setup time has ended!');
+        require(address(this).balance >= storedAmount);
+        require(storedAmount > amount);
 
         voters[_voter].eligibleToVote = true;
         registeredVoterCount += 1;      // Increment registered voters.
         voterAddressList.push(_voter);
+
+        // Fund user with money
+        giveFund(_voter);
+
     }
 
-    function claimFund() public {
-        address _voter = msg.sender;
+    function giveFund(address _voter) onlyOwner private {
         require(voters[_voter].eligibleToVote); // User already had the right to vote
         require(address(this).balance >= storedAmount);
         require(!voters[_voter].isFunded);
@@ -205,6 +211,7 @@ contract BallotContract {
         voters[_voter].isFunded = true;
         storedAmount -= amount;
         _voter.transfer(amount);
+        fundedVoterCount += 1;
     }
 
     /*
@@ -214,10 +221,6 @@ contract BallotContract {
     *        revert all changes.
     */
     function voteForCandidate(bytes32 _candidateID) private {
-        require(validTime());
-        require(canVote(msg.sender));// Get the Voter struct for this sender.
-
-        voters[msg.sender].isVoted = true;
         votedVoterCount += 1;
         voters[msg.sender].votedFor.push(_candidateID); //Add candidateID to list whom voter voted
         voteReceived[_candidateID].push(msg.sender);
@@ -239,6 +242,7 @@ contract BallotContract {
             voteForCandidate(_candidateIDs[i]);
             //emit VoteFor(msg.sender, _candidateIDs);
         }
+        voters[msg.sender].isVoted = true;
     }
 
     function validCandidate(bytes32 _candidateID) public view returns (bool) {
@@ -251,7 +255,7 @@ contract BallotContract {
     }
 
     function hasRightToVote(address voterAddress) public view returns (bool) {
-        if (voters[voterAddress].eligibleToVote && voters[voterAddress].isVoted) {
+        if (voters[voterAddress].eligibleToVote && !voters[voterAddress].isVoted) {
             return true;
         } else {
             return false;
@@ -264,11 +268,12 @@ contract BallotContract {
     * Returns the ballots bytes32.
     */
     function getBallotOverview() public returns (
-        bytes32, bool, uint, uint, uint, uint, uint, uint, uint, uint, uint
+        bytes32, uint, bool, uint, uint, uint, uint, uint, uint, uint, uint, uint
     ) {
         return ( // Do not change the return order
         /*Ballot Info*/
         ballotName,
+        limitCandidate,
         isFinalized,
         amount,
         storedAmount,
