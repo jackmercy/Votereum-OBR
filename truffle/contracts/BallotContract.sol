@@ -68,6 +68,7 @@ contract BallotContract {
     function validTime() private view returns (bool) {
         if ( now > endVotingPhase || now < startVotingPhase)
             return false;
+        return true;
     }
 
     function canVote(address voterAddress) private view returns (bool) {
@@ -210,6 +211,7 @@ contract BallotContract {
         voters[_voter].isFunded = true;
         storedAmount -= amount;
         _voter.transfer(amount);
+        fundedVoterCount += 1;
     }
 
     /*
@@ -219,10 +221,6 @@ contract BallotContract {
     *        revert all changes.
     */
     function voteForCandidate(bytes32 _candidateID) private {
-        require(validTime());
-        require(canVote(msg.sender));// Get the Voter struct for this sender.
-
-        voters[msg.sender].isVoted = true;
         votedVoterCount += 1;
         voters[msg.sender].votedFor.push(_candidateID); //Add candidateID to list whom voter voted
         voteReceived[_candidateID].push(msg.sender);
@@ -244,6 +242,7 @@ contract BallotContract {
             voteForCandidate(_candidateIDs[i]);
             //emit VoteFor(msg.sender, _candidateIDs);
         }
+        voters[msg.sender].isVoted = true;
     }
 
     function validCandidate(bytes32 _candidateID) public view returns (bool) {
