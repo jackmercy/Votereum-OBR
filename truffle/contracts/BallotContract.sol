@@ -221,6 +221,7 @@ contract BallotContract {
     *        revert all changes.
     */
     function voteForCandidate(bytes32 _candidateID) private {
+        require(validCandidate(_candidateID));
         votedVoterCount += 1;
         voters[msg.sender].votedFor.push(_candidateID); //Add candidateID to list whom voter voted
         voteReceived[_candidateID].push(msg.sender);
@@ -235,8 +236,9 @@ contract BallotContract {
     *        revert all changes.
     */
     function voteForCandidates(bytes32[] _candidateIDs) public {
-        require(validTime());
-        require(canVote(msg.sender));
+        // comment for function debug
+        //require(validTime());
+        //require(canVote(msg.sender));
 
         for (uint i = 0; i < _candidateIDs.length; i++) {
             voteForCandidate(_candidateIDs[i]);
