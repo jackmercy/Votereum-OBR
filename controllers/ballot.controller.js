@@ -186,7 +186,7 @@ function postBallotInfo() {
             var data = JSON.parse(msg.content.toString());
 
             var candidateIds = data['candidateIds'].map(candidate => convertToBytes32(candidate));
-
+            console.log(data['candidateIds']);
             var isUnlocked = await isAccountUnlocked(600);
 
             if (isUnlocked) {
