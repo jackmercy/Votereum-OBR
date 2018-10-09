@@ -186,6 +186,7 @@ function postBallotInfo() {
             var data = JSON.parse(msg.content.toString());
 
             var candidateIds = data['candidateIds'].map(candidate => convertToBytes32(candidate));
+            console.log(candidateIds);
 
             var isUnlocked = await isAccountUnlocked(600);
 
@@ -283,7 +284,7 @@ function postCloseBallot() {
     "candidates": [ "1000", "1002", "1003"]
 }
 */
-function postCandidates() {
+ function postCandidates() {
     var method = 'postCandidates';
     var ballotQueue = 'ballot_queue.' + method;
 
@@ -297,8 +298,11 @@ function postCandidates() {
             //-----Request + response handle here------
             var data = JSON.parse(msg.content.toString());
 
+
             var candidates = data['candidateIds'];
+            console.log(candidates);
             candidates = candidates.map(candidate => convertToBytes32(candidate));
+            console.log(candidates);
 
             var isUnlocked = await isAccountUnlocked(600);
 
@@ -856,13 +860,14 @@ function postCandidateResult() {
             var isUnlocked = await isAccountUnlocked(600);
 
             if (isUnlocked) {
-                console.log(isUnlocked);
+                console.log('result of ' + convertToBytes32(data['candidateID']));
                 ballotContract.methods.getCandidateResult(convertToBytes32(data['candidateID'])).call()
                     .then(function (data) {
                         const result = {
                             voteCount: data[0],
                             whoVoted: data[1]
                         };
+                        console.log(result);
 
                         ch.sendToQueue(
                             msg.properties.replyTo,
@@ -939,7 +944,7 @@ function postVoteForCandidates() {
             var data = JSON.parse(msg.content.toString());
 
             var candidates = data['candidateIds'];
-            candidates = candidates.map(candidate => convertToBytes32(candidate));
+            console.log(candidates);
 
             web3.eth.getTransactionCount(data['address']).then(function (_nonce) {
                 const txObject = {
@@ -951,12 +956,13 @@ function postVoteForCandidates() {
                     data: voteForCandidateEncode(candidates),
                     nonce: _nonce
                 };
-
+                console.log(txObject);
                 web3.eth.personal.signTransaction(txObject, data['chainPassword'])
                     .then(result => {
                         const raw = result['raw'];
                         web3.eth.sendSignedTransaction(raw)
                             .on('transactionHash', function (hash) {
+                                console.log(hash);
                                 ch.sendToQueue(
                                     msg.properties.replyTo,
                                     new Buffer(JSON.stringify(getResponseObject(hash))),
@@ -1095,7 +1101,9 @@ function postClaimFund() {
 
 //Convert this method into string for 'data' section of transactionObject
 function voteForCandidateEncode(_candidates) {
+    console.log(_candidates);
     _candidates = _candidates.map(candidate => convertToBytes32(candidate));
+    console.log(_candidates);
 
     return ballotContract.methods.voteForCandidates(_candidates).encodeABI(); //hex
 }
