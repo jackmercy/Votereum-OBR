@@ -293,6 +293,17 @@ contract BallotContract {
         );
     }
 
+    /** Returns the ballot phases */
+    function getBallotPhases() public returns (uint, uint, uint, uint) {
+        return (
+        /*Phase Info*/
+        startRegPhase,
+        endRegPhase,
+        startVotingPhase,
+        endVotingPhase
+        );
+    }
+
     /*
     * Returns the number of candidates.
     */

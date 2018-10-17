@@ -146,11 +146,53 @@ function getBallotInfo() {
             ch.ack(msg);
         });
     });
-
-
 }
 
+/**
+ * GET: [/api/get-ballot-phases]
+ */
+/*  */
+function getBallotPhases() {
+    var method = 'getBallotPhases';
+    var ballotQueue = 'ballot_queue.' + method;
+    amqpConn.createChannel(function(err, ch) {
 
+        ch.assertQueue(ballotQueue, {durable: false});
+        
+        ch.prefetch(1);
+        console.log(' [AMQP] Awaiting ' + method + ' requests');
+
+        ch.consume(ballotQueue, function reply(msg) {
+            console.log('[x] consume request from API ' + method + '()');
+            ballotContract.methods.getBallotPhases().call()
+                .then(function(data){
+                    const phaseInfo = {
+                        startRegPhase: data[0],
+                        endRegPhase: data[1],
+                        startVotingPhase: data[2],
+                        endVotingPhase: data[3]
+                    };
+                    ch.sendToQueue(
+                        msg.properties.replyTo,
+                        new Buffer(JSON.stringify(getResponseObject(phaseInfo))),
+                        {
+                            correlationId: msg.properties.correlationId
+                        }
+                    );
+                })
+                .catch(function (error) {
+                    ch.sendToQueue(
+                        msg.properties.replyTo,
+                        new Buffer(JSON.stringify(getErrorObject(error.message))),
+                        {
+                            correlationId: msg.properties.correlationId
+                        }
+                    );
+                });
+            ch.ack(msg);
+        });
+    });
+}
 /*
 - POST: [/api/contract]
 - message.content:
@@ -1172,6 +1214,7 @@ async function test() {
 export default {
     postBallotInfo,
     getBallotInfo,
+    getBallotPhases,
     postCandidates,
     getCandidates,
     getIsFinalized,

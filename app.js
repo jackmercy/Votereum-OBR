@@ -60,7 +60,7 @@ function setupAMQPControllers() {
     /* Citizen controller */
     //CitizenController.isAccountUnlocked();
     /* End of Citizen controller */
-
+    BallotController.getBallotPhases();
     BallotController.getBallotInfo();
     BallotController.postBallotInfo();
     BallotController.postCloseBallot();
