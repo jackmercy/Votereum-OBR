@@ -1,3 +1,4 @@
+
 function convertToBytes32(text) {
     return web3.utils.asciiToHex(text);
 }

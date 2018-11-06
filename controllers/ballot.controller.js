@@ -47,6 +47,7 @@ function isAccountUnlocked(time) {
 }
 
 function isValidAddress(address) {
+    console.log(`isValidAddress: ${address}`);
     return web3.utils.isAddress(address);
 }
 /*-------------------------------------*/
@@ -238,10 +239,10 @@ function postBallotInfo() {
                     convertToBytes32(data['ballotName']),
                     data['fundAmount'],
                     data['limitCandidate'],
-                    data['startRegPhase'],
-                    data['endRegPhase'],
                     data['startVotingPhase'],
                     data['endVotingPhase'],
+                    data['startRegPhase'],
+                    data['endRegPhase'],
                     candidateIds
                 ).send(options)
                     .on('transactionHash', function (hash) {
@@ -970,7 +971,7 @@ function postCandidateResult() {
     "0xb69748c2df17e870b48366ca06942140071b5cb0d0f7757791134336dfa80716"
 }
 */
-function postVoteForCandidates() {
+function  postVoteForCandidates() {
 
     var method = 'postVoteForCandidates';
     var ballotQueue = 'ballot_queue.' + method;
@@ -998,13 +999,13 @@ function postVoteForCandidates() {
                     data: voteForCandidateEncode(candidates),
                     nonce: _nonce
                 };
-                console.log(txObject);
+                console.log(`txObjext: ${txObject}`);
                 web3.eth.personal.signTransaction(txObject, data['chainPassword'])
                     .then(result => {
                         const raw = result['raw'];
                         web3.eth.sendSignedTransaction(raw)
                             .on('transactionHash', function (hash) {
-                                console.log(hash);
+                                console.log(`hash is: ${hash}`);
                                 ch.sendToQueue(
                                     msg.properties.replyTo,
                                     new Buffer(JSON.stringify(getResponseObject(hash))),
