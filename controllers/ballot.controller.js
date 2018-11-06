@@ -626,7 +626,7 @@ function postGiveRightToVote() {
 - POST: [/api/ballot/hasRight]
 - req.body:
 {
-    "voterAddress": "0x11a4c82c1e5CBE015c6d09df2F30fD1668a5E410"
+    "address": "0x11a4c82c1e5CBE015c6d09df2F30fD1668a5E410"
 }
 - Response:
 {
@@ -647,7 +647,7 @@ function postHasRightToVote() {
             //-----Request + response handle here------
             var data = JSON.parse(msg.content.toString());
 
-            var address = data['voterAddress']
+            var address = data['address']
             if (!isValidAddress(address)) {
                 ch.sendToQueue(
                     msg.properties.replyTo,
