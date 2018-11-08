@@ -1140,6 +1140,61 @@ function postClaimFund() {
     });
 }
 
+/*
+- req.body: {
+    "citizenId": "0432",
+    "password": "123456"
+}
+- Response:
+{
+    "address": "0xb69748c2df17e870b48366ca06942140071b5cb0d0f7757791134336dfa80716"
+}
+*/
+function postStoreBlockchainAccount() {
+
+    var method = 'postStoreBlockchainAccount';
+    var ballotQueue = 'ballot_queue.' + method;
+
+    amqpConn.createChannel(function (err, ch) {
+        ch.assertQueue(ballotQueue, { durable: false });
+        ch.prefetch(1);
+        console.log(' [AMQP] Awaiting ' + method + ' requests');
+        ch.consume(ballotQueue, async function reply(msg) {
+            console.log('[x] consume request from API ' + method + '()');
+
+            //-----Request + response handle here------
+            var data = JSON.parse(msg.content.toString());
+
+            web3.eth.personal.newAccount(data['password']).then((_address) => {
+                const address = {
+                    address: _address
+                };
+                console.log(_address);
+
+                ch.sendToQueue(
+                    msg.properties.replyTo,
+                    new Buffer(JSON.stringify(getResponseObject(address))),
+                    {
+                        correlationId: msg.properties.correlationId
+                    }
+                );
+            }).catch(error => {
+                ch.sendToQueue(
+                    msg.properties.replyTo,
+                    new Buffer(JSON.stringify(getErrorObject(error.message))),
+                    {
+                        correlationId: msg.properties.correlationId
+                    }
+                );
+            });
+
+            //--------------------------------------
+
+            ch.ack(msg);
+        });
+    });
+}
+
 /*-------------Voter section -----------------*/
 
 //Convert this method into string for 'data' section of transactionObject
@@ -1229,6 +1284,7 @@ export default {
     postCandidateResult,
 
     postVoteForCandidates,
+    postStoreBlockchainAccount,
 
     test
 };
