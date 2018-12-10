@@ -18,7 +18,7 @@ import BallotController from './controllers/ballot.controller';
 
 global.app = express();
 global.amqpConn = null;
-var port = process.env.port || 8080;
+var port = process.env.port || 8000;
 
 /* Init variable */
 
