@@ -6,23 +6,32 @@ pragma experimental ABIEncoderV2; // Allow passing struct as argument
 contract BallotContract {
 
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Contract Constructor ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Ballot Management~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
-    address owner;
-    uint256 storedAmount;
+    address private owner;
 
-    /*
-    * Modifier to only allow the owner to call a function.
-    */
-    modifier onlyOwner {
-        require(msg.sender == owner );
-        _;
+    bytes32 private ballotName;
+    uint    private limitCandidate;
 
-    }
+    // Time: seconds since 1970-01-01
+    uint private    startRegPhase;
+    uint private    endRegPhase;
+    uint private    startVotingPhase;
+    uint private    endVotingPhase;
 
-    /*
-    *  This function is called *once* at first initialization into the blockchain.
-    */
+    // Ballot status
+    bool private    isFinalized;            // Whether the owner can still add voting options.
+    uint private    registeredVoterCount;   // Total number of voter addresses registered.
+    uint private    votedVoterCount;
+    //uint private    fundedVoterCount;
+    uint private    amount; // in GWei
+    uint256 private storedAmount;
+
+    // Candidate list
+    bytes32[] private candidateIDs;
+    mapping (bytes32 => address[]) voteReceived; //map candidateId to array of address of whom has voted for them
+
+
     constructor ()
     {
         owner = msg.sender;       // Set the owner to the address creating the contract.
@@ -51,7 +60,7 @@ contract BallotContract {
     }
 
     function () payable {
-        storedAmount = msg.value;
+        storedAmount += msg.value;
     }
 
     function claimStoredAmount(bytes32 phrase) onlyOwner {
@@ -62,53 +71,16 @@ contract BallotContract {
         owner.transfer(storedAmount); // Transfer back remaining amount
     }
 
-
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Validator ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
-
-    function validTime() private view returns (bool) {
-        if ( now > endVotingPhase || now < startVotingPhase)
-            return false;
-        return true;
-    }
-
-    function canVote(address voterAddress) private view returns (bool) {
-        if (isFinalized == false)       // If the options are not finalized, we cannot vote.
-            return false;
-
-        if (voters[voterAddress].eligibleToVote == false)
-            return false;
-
-        if (voters[voterAddress].isVoted == true) // If the voter has already voted, voter cannot vote anymore
-            return false;
-        return true;
-    }
-
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Ballot Options (Candidate) ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
-
-
-    bytes32 ballotName; // The ballot candidateID.
-    uint    limitCandidate;
-
-    // Time: seconds since 1970-01-01
-    uint    startRegPhase;
-    uint    endRegPhase;
-    uint    startVotingPhase;
-    uint    endVotingPhase;
-
-    // Ballot status
-    bool    isFinalized;       // Whether the owner can still add voting options.
-    uint    registeredVoterCount;   // Total number of voter addresses registered.
-    uint    votedVoterCount;
-    uint    fundedVoterCount;
-    uint    amount; // in GWei
-
-    //
-    bytes32[] candidateIDs;
-    mapping (bytes32 => address[]) voteReceived; //map candidateId to array of address of whom has voted for them
-
-    function setupBallot (bytes32 _ballotName, uint _fundAmount, uint _limitCandidate,
-        uint _startVotingPhase, uint _endVotingPhase,
-                          uint _startRegPhase, uint _endRegPhase, bytes32[] _candidateIDs) onlyOwner public {
+    function setupBallot (
+        bytes32 _ballotName,
+        uint _fundAmount,
+        uint _limitCandidate,
+        uint _startVotingPhase,
+        uint _endVotingPhase,
+        uint _startRegPhase,
+        uint _endRegPhase,
+        bytes32[] _candidateIDs
+    ) onlyOwner public {
 
         ballotName = _ballotName;
         amount = _fundAmount*1000000000; //convert to wei
@@ -127,10 +99,9 @@ contract BallotContract {
         addCandidates(_candidateIDs);
     }
 
-    function setTransferAmount(uint _amount) {
+    function setTransferAmount(uint _amount) onlyOwner public {
         amount = _amount*1000000000; //convert Gwei to wei
     }
-
 
     function addCandidates(bytes32[] _candidateIDs) onlyOwner public {
         require (now < endRegPhase, 'Ballot setup time has ended!');
@@ -139,11 +110,6 @@ contract BallotContract {
         candidateIDs = _candidateIDs;
     }
 
-    /*
-    *  Call this once all options have been added, this will stop further changes
-    *  and allow votes to be cast.
-    *  NOTE: this can only be called by the ballot owner.
-    */
     function finalizeBallot(bytes32 phrase) onlyOwner public {
         require(candidateIDs.length > 2);
         require( keccak256(phrase) == keccak256(bytes32('finalize')));
@@ -153,7 +119,7 @@ contract BallotContract {
         isFinalized = true;    // Stop the addition of any more change.
     }
 
-    function resetTime(bytes32 phrase) onlyOwner public returns(bool) {
+    function resetTime(bytes32 phrase) onlyOwner public {
         if (keccak256(phrase) == keccak256(bytes32('startRegPhase'))) {
             startRegPhase = 0;
         }
@@ -166,10 +132,10 @@ contract BallotContract {
         if (keccak256(phrase) == keccak256(bytes32('endVotingPhase'))) {
             endVotingPhase = 0;
         }
-        return keccak256(phrase) == keccak256(bytes32('startRegPhase'));
     }
 
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Voting Options ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
+
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Voting Management ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
     /*
     *  Structure which represents a single voter.
@@ -177,18 +143,14 @@ contract BallotContract {
     struct Voter
     {
         bool eligibleToVote;    // Is this voter allowed to vote?
-        bool isVoted;             // State of whether this voter has voted.
+        bool isVoted;           // State of whether this voter has voted.
         bool isFunded;
-        bytes32[] votedFor;          // List candidates' ID this voter voted for.
+        bytes32[] votedFor;     // List candidates' IDs this voter voted for.
     }
 
-    address[] voterAddressList;
+    address[] private voterAddressList;
     mapping(address => Voter) public voters; // State variable which maps any address to a 'Voter' struct.
 
-    /*
-    *  Allow an address (voter) to vote on this ballot.
-    *  NOTE: this can only be called by the ballot owner.
-    */
     function giveRightToVote(address _voter) onlyOwner public {
         require (now < endRegPhase, 'Ballot setup time has ended!');
         require(address(this).balance >= storedAmount);
@@ -214,40 +176,25 @@ contract BallotContract {
         fundedVoterCount += 1;
     }
 
-    /*
-    *  Allow an eligible voter to vote for their chosen votingOption.
-    *
-    *  NOTE: if anything fails during this call we will throw and automatically
-    *        revert all changes.
-    */
     function voteForCandidate(bytes32 _candidateID) private {
         require(validCandidate(_candidateID));
-        votedVoterCount += 1;
         voters[msg.sender].votedFor.push(_candidateID); //Add candidateID to list whom voter voted
         voteReceived[_candidateID].push(msg.sender);
     }
 
-    /*
-    *  Allow an eligible voter to vote for a list of candidate
-    *  If they have already isVoted, then remove their vote from the previous
-    *  'votingOption' and assign it to the new one.
-    *
-    *  NOTE: if anything fails during this call we will throw and automatically
-    *        revert all changes.
-    */
     function voteForCandidates(bytes32[] _candidateIDs) public {
-        // comment for function debug
-        //require(validTime());
-        //require(canVote(msg.sender));
+        require(validTime());
+        require(isFinalized);
+        require(hasRightToVote(msg.sender));
 
         for (uint i = 0; i < _candidateIDs.length; i++) {
             voteForCandidate(_candidateIDs[i]);
-            //emit VoteFor(msg.sender, _candidateIDs);
         }
         voters[msg.sender].isVoted = true;
+        votedVoterCount += 1;
     }
 
-    function validCandidate(bytes32 _candidateID) public view returns (bool) {
+    function validCandidate(bytes32 _candidateID) private view returns (bool) {
         for (uint i = 0; i < candidateIDs.length; i++) {
             if (candidateIDs[i] == _candidateID) {
                 return true;
@@ -264,11 +211,23 @@ contract BallotContract {
         }
     }
 
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Getter Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Getters & Validators Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
-    /*
-    * Returns the ballots bytes32.
-    */
+    /*------Validators-------*/
+    function validTime() private returns (bool) {
+        if ( now < endVotingPhase || now > startVotingPhase) {
+            return true;
+        } else { return false; }
+    }
+
+    modifier onlyOwner {
+        require(msg.sender == owner );
+        _;
+    }
+
+    /*------Getters-------*/
+
+    //Get ballot info
     function getBallotOverview() public returns (
         bytes32, uint, bool, uint, uint, uint, uint, uint, uint, uint, uint, uint
     ) {
@@ -293,7 +252,7 @@ contract BallotContract {
         );
     }
 
-    /** Returns the ballot phases */
+    //Get ballot timeline info
     function getBallotPhases() public returns (uint, uint, uint, uint) {
         return (
         /*Phase Info*/
@@ -304,51 +263,43 @@ contract BallotContract {
         );
     }
 
-    /*
-    * Returns the number of candidates.
-    */
+    //Get total number of candidates
     function getCandidateLength() public returns (uint)  {
         return candidateIDs.length;
     }
 
+    //Get list of candidate for that ballot
     function getCandidateList() public returns (bytes32[]) {
         return candidateIDs;
     }
 
-    /*    *//*
-    * Returns the candidateID of a candidate at a specific index.
-    * Throws if index out of bounds.
-    *//*
-    function getVotingOptionsName(uint _index) returns (bytes32)
-    {
-        return votingOptions[_index].candidateID;
-    }*/
-
-    /*
-    * Returns the number of votes for a candidate at the specified index.
-    * Throws if index out of bounds.
-    */
+    //Get total vote count for that candidate
     function getCandidateResult(bytes32 _candidateID) public returns (uint, address[])
     {
         return (voteReceived[_candidateID].length, voteReceived[_candidateID]);
     }
 
-    // Return a list of people who have voted for candidate
-
-
-    /*
-    * Returns if the voting options have been finalized.
-    */
+    //Whether ballot is finalized
     function isBallotFinalized() public returns (bool)
     {
         return isFinalized;
     }
 
+    //Get list of candidate that a voter has voted for
     function getVotedForList(address voterAddress) public returns (bytes32[]) {
+        require(now > endVotingPhase);
         return voters[voterAddress].votedFor;
     }
 
-    function getVoterAddressList() onlyOwner public  returns (address[]) {
+    //Get list of voterAddress that has voted for a candidate
+    function getAddressForCandidate(bytes32 candidateID) public returns (address[]) {
+        require(now > endVotingPhase);
+        return voteReceived[candidateID];
+    }
+
+    //Get list of eligible candidate for that ballot
+    function getEligibleVoterList() onlyOwner public  returns (address[]) {
+        require(now > endVotingPhase);
         return voterAddressList;
     }
 
