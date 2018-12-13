@@ -117,8 +117,7 @@ function getBallotInfo() {
 
                     const voterInfo = {
                         registeredVoterCount: data[9],
-                        votedVoterCount: data[10],
-                        fundedVoterCount: data[11]
+                        votedVoterCount: data[10]
                     };
 
                     const ballotOverview = {

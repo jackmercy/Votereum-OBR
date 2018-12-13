@@ -46,7 +46,7 @@ contract BallotContract {
         isFinalized = false;
         registeredVoterCount = 0;
         votedVoterCount = 0;
-        fundedVoterCount = 0;
+        //fundedVoterCount = 0;
         storedAmount = address(this).balance;
         amount = 0;
 
@@ -93,7 +93,7 @@ contract BallotContract {
         isFinalized = false;
         registeredVoterCount = 0;
         votedVoterCount = 0;
-        fundedVoterCount = 0;
+        //fundedVoterCount = 0;
         storedAmount = address(this).balance;
 
         addCandidates(_candidateIDs);
@@ -173,7 +173,7 @@ contract BallotContract {
         voters[_voter].isFunded = true;
         storedAmount -= amount;
         _voter.transfer(amount);
-        fundedVoterCount += 1;
+        //fundedVoterCount += 1;
     }
 
     function voteForCandidate(bytes32 _candidateID) private {
@@ -229,7 +229,7 @@ contract BallotContract {
 
     //Get ballot info
     function getBallotOverview() public returns (
-        bytes32, uint, bool, uint, uint, uint, uint, uint, uint, uint, uint, uint
+        bytes32, uint, bool, uint, uint, uint, uint, uint, uint, uint, uint
     ) {
         return ( // Do not change the return order
         /*Ballot Info*/
@@ -247,8 +247,7 @@ contract BallotContract {
 
         /*Voter Info*/
         registeredVoterCount,
-        votedVoterCount,
-        fundedVoterCount
+        votedVoterCount
         );
     }
 
