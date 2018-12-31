@@ -25,7 +25,7 @@ var port = process.env.port || 8000;
 function startAMQP() {
     amqp.connect('amqp://localhost', function(err, conn) {
         if (err) {
-            console.error('[AMQP]', err.message);
+            console.error('[AMQP-ERR]', err.message);
 
             return setTimeout(startAMQP(), 1500);
         }
@@ -35,7 +35,7 @@ function startAMQP() {
             }
         });
         conn.on('close', function() {
-            console.error('[AMQP] reconnecting');
+            console.error('[AMQP] reconnecting in 1s');
 
             return setTimeout(startAMQP(), 1500);
         });

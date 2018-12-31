@@ -20,6 +20,7 @@ contract BallotContract {
     uint private    endVotingPhase;
 
     // Ballot status
+    bool private    canPublish;
     bool private    isFinalized;            // Whether the owner can still add voting options.
     uint private    registeredVoterCount;   // Total number of voter addresses registered.
     uint private    votedVoterCount;
@@ -90,6 +91,7 @@ contract BallotContract {
         startVotingPhase = _startVotingPhase;
         endVotingPhase = _endVotingPhase;
 
+        canPublish = false;
         isFinalized = false;
         registeredVoterCount = 0;
         votedVoterCount = 0;
@@ -117,6 +119,11 @@ contract BallotContract {
         require (now > startRegPhase);
 
         isFinalized = true;    // Stop the addition of any more change.
+    }
+
+    function publishBallot() onlyOwner public {
+        require (now > endRegPhase);
+        canPublish = true;
     }
 
     function resetTime(bytes32 phrase) onlyOwner public {
@@ -231,6 +238,7 @@ contract BallotContract {
     function getBallotOverview() public returns (
         bytes32, uint, bool, uint, uint, uint, uint, uint, uint, uint, uint
     ) {
+        require (msg.sender == owner || canPublish);
         return ( // Do not change the return order
         /*Ballot Info*/
         ballotName,
@@ -286,19 +294,19 @@ contract BallotContract {
 
     //Get list of candidate that a voter has voted for
     function getVotedForList(address voterAddress) public returns (bytes32[]) {
-        require(now > endVotingPhase);
+        require(canPublish);
         return voters[voterAddress].votedFor;
     }
 
     //Get list of voterAddress that has voted for a candidate
     function getAddressForCandidate(bytes32 candidateID) public returns (address[]) {
-        require(now > endVotingPhase);
+        require(canPublish);
         return voteReceived[candidateID];
     }
 
     //Get list of eligible candidate for that ballot
     function getEligibleVoterList() onlyOwner public  returns (address[]) {
-        require(now > endVotingPhase);
+        require(canPublish);
         return voterAddressList;
     }
 
