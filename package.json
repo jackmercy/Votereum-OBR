@@ -43,5 +43,11 @@
     "eslint": "^5.1.0",
     "logger": "0.0.1",
     "nodemon": "^1.18.8"
-  }
+  },
+  "keywords": [
+    "blockchain",
+    "votereum",
+    "E-voting"
+  ]
+
 }

@@ -11,6 +11,30 @@
 
 # OBR server
 
+---
+
+## Authors
+* [Cao Minh Khoi    - 14520432](https://github.com/jackmercy)
+  * Email: [14520432@gm.uit.edu.vn](mailto:14520432@gm.uit.edu.vn) or [khoicaominh.mmt@gmail.com](mailto:khoicaominh.mmt@gmail.com)
+* [Vo Cao Thuy Linh - 14520473](https://github.com/Dollyns)
+  * Email: [14520473@gm.uit.edu.vn](mailto:14520473@gm.uit.edu.vn) or [linhvocaothuy@gmail.com](mailto:linhvocaothuy@gmail.com)
+
+---
+
+### Requirement
+
+* [Nodejs v9](https://nodejs.org/en/download/)
+* [erlang](https://www.erlang.org/downloads)
+* [RabbitMQ](https://www.rabbitmq.com/#getstarted)
+* [Geth client](https://geth.ethereum.org/downloads/)
+* [Babel CLI](https://babeljs.io/docs/en/babel-cli) or using npm `npm install --save-dev @babel/core @babel/cli`
+* [amqplib](https://github.com/squaremo/amqp.node) or using npm `npm install --save amqplib`
+
+### Install
+
+* `npm install`
+
+### Running OBR
 1. Before run this server, make sure you're running a geth client
 
 * For dev env run:
