@@ -5,7 +5,7 @@ function convertToBytes32(text) {
 
 function setContractInfo(req, res) {
     var data = req.body;
-    console.log(data);
+    /* console.log(data); */
     try {
         ballotContract.methods.setupBallot(
             convertToBytes32(data['ballotName']),
@@ -13,7 +13,7 @@ function setContractInfo(req, res) {
             data['ballotStartTime']
         ).send()
             .on('transactionHash', function (hash) {
-                console.log(hash);
+                console.log(`transactionHash: ${hash}`);
                 res.send('Contract info was set!');
             })
             .on('error', function (error) {

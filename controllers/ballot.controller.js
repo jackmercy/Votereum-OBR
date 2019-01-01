@@ -233,7 +233,7 @@ function postBallotInfo() {
             var isUnlocked = await isAccountUnlocked(600);
 
             if (isUnlocked) {
-                console.log(isUnlocked);
+                /* console.log(isUnlocked); */
                 ballotContract.methods.setupBallot(
                     convertToBytes32(data['ballotName']),
                     data['fundAmount'],
@@ -342,14 +342,14 @@ function postCloseBallot() {
 
 
             var candidates = data['candidateIds'];
-            console.log(candidates);
+            /* console.log(candidates); */
             candidates = candidates.map(candidate => convertToBytes32(candidate));
             console.log(candidates);
 
             var isUnlocked = await isAccountUnlocked(600);
 
             if (isUnlocked) {
-                console.log(isUnlocked);
+                /* console.log(isUnlocked); */
                 ballotContract.methods.addCandidates(candidates)
                     .send(options)
                     .on('transactionHash', function (hash) {
@@ -520,7 +520,7 @@ function postFinalizeBallot() {
             var isUnlocked = await isAccountUnlocked(600);
 
             if (isUnlocked) {
-                console.log(isUnlocked);
+                /* console.log(isUnlocked); */
                 ballotContract.methods.finalizeBallot(phrase)
                     .send(options)
                     .on('transactionHash', function (hash) {
@@ -776,7 +776,7 @@ function postResetTime() {
             var isUnlocked = await isAccountUnlocked(600);
 
             if (isUnlocked) {
-                console.log(isUnlocked);
+                /* console.log(isUnlocked); */
                 ballotContract.methods.resetTime(phrase)
                     .send(options)
                     .on('transactionHash', function (hash) {
