@@ -235,7 +235,7 @@ contract BallotContract {
     /*------Getters-------*/
 
     //Get ballot info
-    function getBallotOverview() public returns (
+    function getBallotOverview() public view returns (
         bytes32, uint, bool, uint, uint, uint, uint, uint, uint, uint, uint
     ) {
         require (msg.sender == owner || canPublish);
@@ -260,7 +260,7 @@ contract BallotContract {
     }
 
     //Get ballot timeline info
-    function getBallotPhases() public returns (uint, uint, uint, uint) {
+    function getBallotPhases() public view returns (uint, uint, uint, uint) {
         return (
         /*Phase Info*/
         startRegPhase,
@@ -271,41 +271,41 @@ contract BallotContract {
     }
 
     //Get total number of candidates
-    function getCandidateLength() public returns (uint)  {
+    function getCandidateLength() public view returns (uint)  {
         return candidateIDs.length;
     }
 
     //Get list of candidate for that ballot
-    function getCandidateList() public returns (bytes32[]) {
+    function getCandidateList() public view returns (bytes32[]) {
         return candidateIDs;
     }
 
     //Get total vote count for that candidate
-    function getCandidateResult(bytes32 _candidateID) public returns (uint, address[])
+    function getCandidateResult(bytes32 _candidateID) public view returns (uint, address[])
     {
         return (voteReceived[_candidateID].length, voteReceived[_candidateID]);
     }
 
     //Whether ballot is finalized
-    function isBallotFinalized() public returns (bool)
+    function isBallotFinalized() public view returns (bool)
     {
         return isFinalized;
     }
 
     //Get list of candidate that a voter has voted for
-    function getVotedForList(address voterAddress) public returns (bytes32[]) {
+    function getVotedForList(address voterAddress) public view returns (bytes32[]) {
         require(canPublish);
         return voters[voterAddress].votedFor;
     }
 
     //Get list of voterAddress that has voted for a candidate
-    function getAddressForCandidate(bytes32 candidateID) public returns (address[]) {
+    function getAddressForCandidate(bytes32 candidateID) public view returns (address[]) {
         require(canPublish);
         return voteReceived[candidateID];
     }
 
     //Get list of eligible candidate for that ballot
-    function getEligibleVoterList() onlyOwner public  returns (address[]) {
+    function getEligibleVoterList() onlyOwner public view returns (address[]) {
         require(canPublish);
         return voterAddressList;
     }

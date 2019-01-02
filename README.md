@@ -14,9 +14,9 @@
 ---
 
 ## Authors
-* [Cao Minh Khoi    - 14520432](https://github.com/jackmercy)
+* [Cao Minh Khoi](https://github.com/jackmercy)
   * Email: [14520432@gm.uit.edu.vn](mailto:14520432@gm.uit.edu.vn) or [khoicaominh.mmt@gmail.com](mailto:khoicaominh.mmt@gmail.com)
-* [Vo Cao Thuy Linh - 14520473](https://github.com/Dollyns)
+* [Vo Cao Thuy Linh](https://github.com/Dollyns)
   * Email: [14520473@gm.uit.edu.vn](mailto:14520473@gm.uit.edu.vn) or [linhvocaothuy@gmail.com](mailto:linhvocaothuy@gmail.com)
 
 ---
